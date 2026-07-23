@@ -1,0 +1,70 @@
+version = "1"
+
+# Default backend to use when not specified
+default_backend = "opencode"
+
+[telegram]
+# Telegram bot token from @BotFather
+token = ""
+
+# Optional: Restrict access to specific user IDs
+# Leave empty to allow all users
+allowed_users = []
+
+# Optional: Restrict access to specific group chat IDs
+# Leave empty to allow all groups
+allowed_groups = []
+
+# Optional: Webhook configuration
+# Leave empty to use long polling (recommended for development)
+# webhook_url = "https://yourdomain.com/webhook"
+# webhook_secret = "your-webhook-secret"
+
+[storage]
+# Database file path
+# Default: ~/.toc/toc.db
+path = ""
+
+[backends.opencode]
+enabled = true
+command = "opencode"
+args = ["run", "--format", "json"]
+# timeout = "30m"
+
+# Optional: Environment variables for the backend
+# [backends.opencode.environment]
+# OPENAI_API_KEY = "sk-..."
+
+[backends.claude]
+enabled = false
+command = "claude"
+args = ["-p"]
+# timeout = "30m"
+
+[backends.aider]
+enabled = false
+command = "aider"
+args = ["--yes"]
+# timeout = "30m"
+
+[backends.gemini]
+enabled = false
+command = "gemini"
+# timeout = "30m"
+
+[security]
+# Require authentication (recommended for production)
+require_auth = true
+
+# Maximum sessions per user (0 = unlimited)
+max_sessions_per_user = 5
+
+[logging]
+# Log level: debug, info, warn, error
+level = "info"
+
+# Log format: json, console
+format = "console"
+
+# Log output: stdout, stderr, or file path
+output = "stdout"

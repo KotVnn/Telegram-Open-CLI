@@ -1,0 +1,60 @@
+# Binaries
+toc
+toc.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build output
+bin/
+dist/
+
+# Test binary
+*.test
+
+# Coverage
+coverage.out
+coverage.html
+coverage
+cover
+coverprofile.txt
+*.coverprofile
+
+# Go workspace
+go.work
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# SQLite database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Config (user-specific)
+# Keep configs/example.toml, ignore user configs
+~/.toc/
+
+# Development reports
+reports/
