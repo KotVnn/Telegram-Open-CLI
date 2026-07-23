@@ -318,4 +318,29 @@ Feel free to:
 - Start a discussion on GitHub
 - Reach out on Telegram (if available)
 
+## Plugin Development
+
+TOC supports plugins to extend functionality. See `examples/plugins/example/` for a reference implementation.
+
+### Plugin Interface
+
+```go
+type Plugin interface {
+    Name() string
+    Description() string
+    Version() string
+    Initialize(ctx context.Context, config PluginConfig) error
+    Start(ctx context.Context) error
+    Stop(ctx context.Context) error
+    Capabilities() *PluginCapabilities
+}
+```
+
+### Creating a Plugin
+
+1. Create a new directory in `examples/plugins/`
+2. Implement the `Plugin` interface
+3. Register hooks with the plugin manager
+4. Add documentation
+
 Thank you for contributing!

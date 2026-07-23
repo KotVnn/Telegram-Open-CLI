@@ -17,6 +17,10 @@ TOC lets you control AI coding agents (OpenCode, Claude Code, Aider, Gemini CLI)
 - **File Support** - Upload and download files through Telegram
 - **Multi-Project** - Work on multiple projects simultaneously
 - **Plugin System** - Extend functionality with custom plugins
+- **Metrics** - Prometheus metrics endpoint
+- **Docker** - Production-ready Docker support
+- **Shell Completions** - Bash, Zsh, Fish, PowerShell
+- **Auto-Update** - Automatic update notifications
 
 ## Quick Start
 
@@ -165,9 +169,9 @@ export TOC_LOG_LEVEL="debug"
 | Backend | Status | Notes |
 |---------|--------|-------|
 | OpenCode | ✅ Supported | Primary backend, full feature support |
-| Claude Code | 🔜 Planned | Coming in Phase 2 |
-| Aider | 🔜 Planned | Coming in Phase 3 |
-| Gemini CLI | 🔜 Planned | Coming in Phase 3 |
+| Claude Code | ✅ Supported | Full feature support |
+| Aider | ✅ Supported | Full feature support |
+| Gemini CLI | ✅ Supported | Full feature support |
 
 ## Documentation
 
@@ -175,6 +179,25 @@ export TOC_LOG_LEVEL="debug"
 - [Contributing](CONTRIBUTING.md) - How to contribute
 - [Changelog](CHANGELOG.md) - Release history
 - [Roadmap](ROADMAP.md) - Future plans
+
+## Docker
+
+```bash
+# Quick start with Docker
+docker-compose up -d
+
+# With monitoring stack
+docker-compose --profile monitoring up -d
+```
+
+## Metrics
+
+TOC exposes Prometheus metrics at `http://localhost:9090/metrics`:
+
+- `toc_sessions_active` - Active sessions count
+- `toc_messages_received_total` - Total messages received
+- `toc_backend_requests_total` - Backend requests by type
+- `toc_backend_response_time_seconds` - Response time histogram
 
 ## Development
 
