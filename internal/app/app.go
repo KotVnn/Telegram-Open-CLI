@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/rs/zerolog"
 
@@ -18,6 +19,8 @@ import (
 	"github.com/KotVnn/Telegram-Open-CLI/internal/telegram"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/user"
 )
+
+const shutdownTimeout = 30 * time.Second
 
 // App is the main application struct.
 type App struct {
@@ -73,7 +76,10 @@ func (a *App) Run(ctx context.Context) error {
 
 	<-ctx.Done()
 
-	return a.Shutdown(ctx)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	return a.Shutdown(shutdownCtx)
 }
 
 // Shutdown gracefully shuts down the application.
