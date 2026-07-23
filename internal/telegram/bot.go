@@ -333,16 +333,22 @@ func (b *Bot) handleUpdate(ctx context.Context, _ *bot.Bot, update *models.Updat
 }
 
 func (b *Bot) handleCallbackQuery(ctx context.Context, cq *models.CallbackQuery) {
+	if cq.Message.Type != models.MaybeInaccessibleMessageTypeMessage {
+		_ = b.AnswerCallback(ctx, cq.ID, "")
+		return
+	}
+
 	var chatID int64
 	var messageID int
 
-	if cq.Message.Type == models.MaybeInaccessibleMessageTypeMessage && cq.Message.Message != nil {
+	if cq.Message.Message != nil {
 		chatID = cq.Message.Message.Chat.ID
 		messageID = cq.Message.Message.ID
 	}
 
 	handler := b.resolveCallbackHandler(cq.Data)
 	if handler == nil {
+		_ = b.AnswerCallback(ctx, cq.ID, "")
 		return
 	}
 
@@ -373,6 +379,8 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, cq *models.CallbackQuery)
 	if err := chain(ctx, dummyMsg); err != nil {
 		b.logger.Error().Err(err).Str("data", cb.Data).Int64("user_id", cb.FromID).Msg("callback handler error")
 	}
+
+	_ = b.AnswerCallback(ctx, cq.ID, "")
 }
 
 func (b *Bot) resolveCallbackHandler(data string) CallbackHandlerFunc {
@@ -412,6 +420,10 @@ func parseIncomingMessage(update *models.Update) *IncomingMessage {
 	}
 
 	msg := update.Message
+	if msg.From == nil {
+		return nil
+	}
+
 	result := &IncomingMessage{
 		MessageID:     msg.ID,
 		ChatID:        msg.Chat.ID,

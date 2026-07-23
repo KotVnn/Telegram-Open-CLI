@@ -258,6 +258,7 @@ func (a *Adapter) executeStreaming(ctx context.Context, args []string, ch chan<-
 	}
 
 	scanner := bufio.NewScanner(stdout)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024) // 1MB max line size
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
