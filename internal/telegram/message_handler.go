@@ -107,9 +107,7 @@ func HandleMessage(adapter Adapter, sm *SessionManager) HandlerFunc {
 					"Backend error. Please try again.")
 			}
 
-			if responseBuilder.Len() < maxTelegramMessageLength {
-				responseBuilder.WriteString(chunk.Content)
-			}
+			responseBuilder.WriteString(chunk.Content)
 
 			if time.Since(lastEdit) >= editCooldown {
 				editText := responseBuilder.String()
