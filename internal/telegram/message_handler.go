@@ -16,24 +16,34 @@ const maxTelegramMessageLength = 4096
 const maxFileSizeWarning = 10 * 1024 * 1024 // 10MB
 
 func splitMessage(text string, limit int) []string {
-	if len(text) <= limit {
+	runes := []rune(text)
+	if len(runes) <= limit {
 		return []string{text}
 	}
 
 	var parts []string
-	for len(text) > 0 {
-		if len(text) <= limit {
-			parts = append(parts, text)
+	for len(runes) > 0 {
+		if len(runes) <= limit {
+			parts = append(parts, string(runes))
 			break
 		}
 
-		splitIdx := strings.LastIndex(text[:limit], "\n")
-		if splitIdx <= 0 {
+		splitIdx := -1
+		for i := limit - 1; i >= 0; i-- {
+			if runes[i] == '\n' {
+				splitIdx = i
+				break
+			}
+		}
+		if splitIdx < 0 {
 			splitIdx = limit
 		}
 
-		parts = append(parts, text[:splitIdx])
-		text = strings.TrimLeft(text[splitIdx:], "\n")
+		parts = append(parts, string(runes[:splitIdx]))
+		runes = runes[splitIdx:]
+		for len(runes) > 0 && runes[0] == '\n' {
+			runes = runes[1:]
+		}
 	}
 	return parts
 }
