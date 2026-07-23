@@ -189,9 +189,13 @@ func (a *Adapter) StreamMessage(ctx context.Context, req *backend.SendMessageReq
 		args := a.buildArgs(session, req)
 
 		if err := a.executeStreaming(ctx, args, ch); err != nil {
-			ch <- backend.StreamChunk{
+			select {
+			case <-ctx.Done():
+				return
+			case ch <- backend.StreamChunk{
 				Error: fmt.Errorf("streaming failed: %w", err),
 				Done:  true,
+			}:
 			}
 		}
 	}()

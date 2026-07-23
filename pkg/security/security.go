@@ -12,6 +12,7 @@ type RateLimiter struct {
 	clients  map[string]*clientInfo
 	limit    int
 	window   time.Duration
+	stopCh   chan struct{}
 }
 
 type clientInfo struct {
@@ -25,6 +26,7 @@ func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 		clients: make(map[string]*clientInfo),
 		limit:   limit,
 		window:  window,
+		stopCh:  make(chan struct{}),
 	}
 
 	// Cleanup old entries periodically
@@ -32,12 +34,22 @@ func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 		ticker := time.NewTicker(window)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			rl.cleanup()
+		for {
+			select {
+			case <-rl.stopCh:
+				return
+			case <-ticker.C:
+				rl.cleanup()
+			}
 		}
 	}()
 
 	return rl
+}
+
+// Stop stops the cleanup goroutine.
+func (rl *RateLimiter) Stop() {
+	close(rl.stopCh)
 }
 
 // Allow checks if a request from the given IP is allowed.
