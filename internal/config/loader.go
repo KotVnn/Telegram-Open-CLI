@@ -23,6 +23,8 @@ func loadConfig(ctx context.Context) (*Config, error) {
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
 	v.SetDefault("logging.output", "stdout")
+	v.SetDefault("metrics.enabled", false)
+	v.SetDefault("metrics.listen", ":9090")
 
 	configPath := os.Getenv("TOC_CONFIG")
 	if configPath == "" {

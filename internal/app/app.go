@@ -12,6 +12,7 @@ import (
 	"github.com/KotVnn/Telegram-Open-CLI/internal/backend/gemini"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/backend/opencode"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/config"
+	"github.com/KotVnn/Telegram-Open-CLI/internal/metrics"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/project"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/storage"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/telegram"
@@ -26,19 +27,28 @@ type App struct {
 	backends *backend.Manager
 	users    *user.Manager
 	projects *project.Manager
+	metrics  *metrics.Collector
 	logger   zerolog.Logger
 }
 
 // New creates a new App instance.
 func New(cfg *config.Config, logger zerolog.Logger) *App {
 	return &App{
-		config: cfg,
-		logger: logger,
+		config:  cfg,
+		logger:  logger,
+		metrics: metrics.NewCollector(logger),
 	}
 }
 
 // Run starts the application.
 func (a *App) Run(ctx context.Context) error {
+	// Start metrics server
+	if a.config.Metrics.Enabled {
+		if err := a.metrics.Start(a.config.Metrics.Listen); err != nil {
+			return fmt.Errorf("start metrics server: %w", err)
+		}
+	}
+
 	if err := a.initStorage(ctx); err != nil {
 		return err
 	}
@@ -59,6 +69,8 @@ func (a *App) Run(ctx context.Context) error {
 		return err
 	}
 
+	a.logger.Info().Msg("application started successfully")
+
 	<-ctx.Done()
 
 	return a.Shutdown(ctx)
@@ -66,6 +78,8 @@ func (a *App) Run(ctx context.Context) error {
 
 // Shutdown gracefully shuts down the application.
 func (a *App) Shutdown(ctx context.Context) error {
+	a.logger.Info().Msg("shutting down application")
+
 	if err := a.bot.Stop(ctx); err != nil {
 		a.logger.Error().Err(err).Msg("failed to stop telegram bot")
 	}
@@ -76,6 +90,12 @@ func (a *App) Shutdown(ctx context.Context) error {
 
 	if err := a.storage.Close(); err != nil {
 		a.logger.Error().Err(err).Msg("failed to close storage")
+	}
+
+	if a.config.Metrics.Enabled {
+		if err := a.metrics.Stop(ctx); err != nil {
+			a.logger.Error().Err(err).Msg("failed to stop metrics server")
+		}
 	}
 
 	return nil
