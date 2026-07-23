@@ -178,6 +178,12 @@ func (a *Adapter) Capabilities() *backend.Capabilities {
 }
 
 func (a *Adapter) executeCommand(ctx context.Context, args []string) (string, error) {
+	if a.config.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, a.config.Timeout)
+		defer cancel()
+	}
+
 	cmd := exec.CommandContext(ctx, a.config.Command, args...)
 	if a.config.WorkingDir != "" {
 		cmd.Dir = a.config.WorkingDir
@@ -197,6 +203,12 @@ func (a *Adapter) executeCommand(ctx context.Context, args []string) (string, er
 }
 
 func (a *Adapter) executeStreaming(ctx context.Context, args []string, ch chan<- backend.StreamChunk) error {
+	if a.config.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, a.config.Timeout)
+		defer cancel()
+	}
+
 	cmd := exec.CommandContext(ctx, a.config.Command, args...)
 	if a.config.WorkingDir != "" {
 		cmd.Dir = a.config.WorkingDir

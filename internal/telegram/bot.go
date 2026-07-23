@@ -175,6 +175,7 @@ func (b *Bot) startWebhook(ctx context.Context) error {
 }
 
 func (b *Bot) Stop(ctx context.Context) error {
+	b.logger.Info().Msg("stopping telegram bot")
 	return nil
 }
 
