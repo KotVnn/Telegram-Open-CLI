@@ -40,7 +40,27 @@ type Storage interface {
 
 // NewSQLiteDB creates a new SQLite GORM DB instance.
 func NewSQLiteDB(path string) (*gorm.DB, error) {
-	return gorm.Open(sqlite.Open(path), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	// Enable WAL mode for better concurrency
+	if _, err := sqlDB.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		return nil, err
+	}
+
+	// Configure connection pool
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	sqlDB.SetConnMaxLifetime(0)
+
+	return db, nil
 }
 
 // SessionFilter holds filters for listing sessions.
