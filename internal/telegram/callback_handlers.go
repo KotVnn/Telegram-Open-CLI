@@ -2,9 +2,11 @@ package telegram
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/KotVnn/Telegram-Open-CLI/internal/backend"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/storage"
 )
 
@@ -99,6 +101,10 @@ func HandleModelCallback(adapter Adapter, sm *SessionManager) CallbackHandlerFun
 	return func(ctx context.Context, cb *CallbackQuery) error {
 		model := strings.TrimPrefix(cb.Data, "model:")
 
+		sm.mu.Lock()
+		sm.pendingModels[cb.FromID] = model
+		sm.mu.Unlock()
+
 		backend := sm.backend
 		caps := backend.Capabilities()
 
@@ -120,12 +126,45 @@ func HandleAgentCallback(adapter Adapter, sm *SessionManager) CallbackHandlerFun
 	return func(ctx context.Context, cb *CallbackQuery) error {
 		agent := strings.TrimPrefix(cb.Data, "agent:")
 
+		sm.mu.Lock()
+		model := sm.pendingModels[cb.FromID]
+		delete(sm.pendingModels, cb.FromID)
+		sm.mu.Unlock()
+
+		session, err := sm.backend.CreateSession(ctx, backend.SessionOpts{
+			Title: "New Session",
+			Model: model,
+			Agent: agent,
+		})
+		if err != nil {
+			return adapter.AnswerCallback(ctx, cb.ID, "Failed to create session")
+		}
+
+		storageSession := &storage.Session{
+			ID:         session.ID,
+			Backend:    session.Backend,
+			ProjectID:  session.ProjectID,
+			Title:      session.Title,
+			Status:     storage.SessionStatus(session.Status),
+			Model:      session.Model,
+			Agent:      session.Agent,
+			WorkingDir: session.WorkingDir,
+			CreatedAt:  session.CreatedAt,
+			UpdatedAt:  session.UpdatedAt,
+		}
+
+		if err := sm.storage.SaveSession(ctx, storageSession); err != nil {
+			return adapter.AnswerCallback(ctx, cb.ID, "Failed to save session")
+		}
+
+		sm.SetActiveSession(cb.FromID, session.ID)
+
 		if err := adapter.EditMessage(ctx, cb.ChatID, cb.MessageID,
-			"Agent: "+agent+"\n\nSession ready! Send a message to start."); err != nil {
+			fmt.Sprintf("Session created!\n\nID: %s\nModel: %s\nAgent: %s\n\nSend a message to start.", session.ID, model, agent)); err != nil {
 			return err
 		}
 
-		return adapter.AnswerCallback(ctx, cb.ID, "")
+		return adapter.AnswerCallback(ctx, cb.ID, "Session created")
 	}
 }
 

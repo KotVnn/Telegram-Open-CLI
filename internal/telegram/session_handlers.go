@@ -19,7 +19,8 @@ type SessionManager struct {
 	logger         zerolog.Logger
 	botToken       string
 	mu             sync.RWMutex
-	activeSessions map[int64]string // userID -> sessionID
+	activeSessions map[int64]string
+	pendingModels  map[int64]string
 }
 
 // NewSessionManager creates a new session manager.
@@ -30,6 +31,7 @@ func NewSessionManager(storage storage.Storage, backend backend.Backend, logger 
 		logger:         logger,
 		botToken:       botToken,
 		activeSessions: make(map[int64]string),
+		pendingModels:  make(map[int64]string),
 	}
 }
 
