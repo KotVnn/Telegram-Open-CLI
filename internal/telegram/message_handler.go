@@ -13,6 +13,7 @@ import (
 )
 
 const maxTelegramMessageLength = 4096
+const maxFileSizeWarning = 10 * 1024 * 1024 // 10MB
 
 func splitMessage(text string, limit int) []string {
 	if len(text) <= limit {
@@ -164,6 +165,12 @@ func handleDocumentMessage(ctx context.Context, adapter Adapter, sm *SessionMana
 	if sessionID == "" {
 		return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
 			Text: "No active session. Use /new to create one or /sessions to switch.",
+		})
+	}
+
+	if msg.Document.FileSize > maxFileSizeWarning {
+		_ = adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+			Text: fmt.Sprintf("Warning: File size is %dMB. Large files may take longer to process or fail.", msg.Document.FileSize/(1024*1024)),
 		})
 	}
 

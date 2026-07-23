@@ -81,7 +81,7 @@ func AuthMiddleware(adapter Adapter, allowedUsers []int64, allowedChats []int64)
 }
 
 // RateLimitMiddleware limits request frequency.
-func RateLimitMiddleware(requestsPerSecond float64, burst int) Middleware {
+func RateLimitMiddleware(adapter Adapter, requestsPerSecond float64, burst int) Middleware {
 	var (
 		mu             sync.Mutex
 		lastExecutions = make(map[int64]time.Time)
@@ -113,6 +113,9 @@ func RateLimitMiddleware(requestsPerSecond float64, burst int) Middleware {
 			mu.Unlock()
 
 			if shouldLimit {
+				_ = adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+					Text: "You are sending messages too quickly. Please wait a moment.",
+				})
 				return nil
 			}
 

@@ -214,7 +214,7 @@ func (a *App) initTelegram(ctx context.Context) error {
 		))
 	}
 
-	bot.Use(telegram.RateLimitMiddleware(10, 5))
+	bot.Use(telegram.RateLimitMiddleware(bot, 10, 5))
 
 	return nil
 }

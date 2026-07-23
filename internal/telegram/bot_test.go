@@ -731,7 +731,8 @@ func TestAuthMiddlewarePrivateChatSkipsChatCheck(t *testing.T) {
 }
 
 func TestRateLimitMiddleware(t *testing.T) {
-	mw := RateLimitMiddleware(10, 1)
+	adapter := &mockAdapter{}
+	mw := RateLimitMiddleware(adapter, 10, 1)
 
 	handler := func(ctx context.Context, msg *IncomingMessage) error {
 		return nil
@@ -745,7 +746,8 @@ func TestRateLimitMiddleware(t *testing.T) {
 }
 
 func TestRateLimitMiddlewareBlocks(t *testing.T) {
-	mw := RateLimitMiddleware(1, 1)
+	adapter := &mockAdapter{}
+	mw := RateLimitMiddleware(adapter, 1, 1)
 
 	handlerCalled := false
 	handler := func(ctx context.Context, msg *IncomingMessage) error {
