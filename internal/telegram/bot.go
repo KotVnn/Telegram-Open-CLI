@@ -3,6 +3,7 @@ package telegram
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/go-telegram/bot"
@@ -101,6 +102,7 @@ type Middleware func(next HandlerFunc) HandlerFunc
 type Bot struct {
 	bot               *bot.Bot
 	logger            zerolog.Logger
+	config            Config
 	middlewares       []Middleware
 	commandHandlers   map[string]HandlerFunc
 	messageHandlers   []messageHandler
@@ -121,7 +123,7 @@ type callbackHandler struct {
 // Config holds Telegram bot configuration.
 type Config struct {
 	Token         string
-	Mode          string
+	Mode          string // "polling" or "webhook"
 	WebhookURL    string
 	WebhookSecret string
 	Logger        zerolog.Logger
@@ -132,6 +134,7 @@ func New(cfg Config) (*Bot, error) {
 	b := &Bot{
 		logger:          cfg.Logger,
 		commandHandlers: make(map[string]HandlerFunc),
+		config:          cfg,
 	}
 
 	opts := []bot.Option{
@@ -148,6 +151,25 @@ func New(cfg Config) (*Bot, error) {
 }
 
 func (b *Bot) Start(ctx context.Context) error {
+	if b.config.Mode == "webhook" && b.config.WebhookURL != "" {
+		return b.startWebhook(ctx)
+	}
+	b.bot.Start(ctx)
+	return nil
+}
+
+func (b *Bot) startWebhook(ctx context.Context) error {
+	params := &bot.SetWebhookParams{
+		URL: b.config.WebhookURL,
+	}
+	if b.config.WebhookSecret != "" {
+		params.SecretToken = b.config.WebhookSecret
+	}
+
+	if _, err := b.bot.SetWebhook(ctx, params); err != nil {
+		return fmt.Errorf("set webhook: %w", err)
+	}
+
 	b.bot.Start(ctx)
 	return nil
 }

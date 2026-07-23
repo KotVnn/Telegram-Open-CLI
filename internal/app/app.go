@@ -7,7 +7,9 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/KotVnn/Telegram-Open-CLI/internal/backend"
+	"github.com/KotVnn/Telegram-Open-CLI/internal/backend/aider"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/backend/claude"
+	"github.com/KotVnn/Telegram-Open-CLI/internal/backend/gemini"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/backend/opencode"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/config"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/project"
@@ -108,6 +110,14 @@ func (a *App) initBackends(ctx context.Context) error {
 		return claude.New()
 	})
 
+	a.backends.Register("aider", func() backend.Backend {
+		return aider.New()
+	})
+
+	a.backends.Register("gemini", func() backend.Backend {
+		return gemini.New()
+	})
+
 	configs := make(map[string]backend.BackendConfig)
 	for name, cfg := range a.config.Backends {
 		configs[name] = backend.BackendConfig{
@@ -140,6 +150,7 @@ func (a *App) initTelegram(ctx context.Context) error {
 	}
 
 	sessionManager := telegram.NewSessionManager(a.storage, defaultBackend, a.logger, a.config.Telegram.Token)
+	projectManager := telegram.NewProjectManager(a.projects, a.storage)
 
 	bot.HandleCommand("start", telegram.HandleStart(a.bot))
 	bot.HandleCommand("help", telegram.HandleHelp(a.bot))
@@ -149,6 +160,12 @@ func (a *App) initTelegram(ctx context.Context) error {
 	bot.HandleCommand("switch", telegram.HandleSwitch(a.bot, sessionManager))
 	bot.HandleCommand("close", telegram.HandleClose(a.bot, sessionManager))
 	bot.HandleCommand("status", telegram.HandleStatus(a.bot, sessionManager))
+	bot.HandleCommand("me", telegram.HandleMe(a.bot, a.users))
+	bot.HandleCommand("users", telegram.HandleUsers(a.bot, a.users))
+	bot.HandleCommand("ban", telegram.HandleBan(a.bot, a.users))
+	bot.HandleCommand("unban", telegram.HandleUnban(a.bot, a.users))
+	bot.HandleCommand("role", telegram.HandleRole(a.bot, a.users))
+	bot.HandleCommand("project", telegram.HandleProject(a.bot, projectManager))
 
 	bot.HandleDefault(telegram.HandleMessage(a.bot, sessionManager))
 

@@ -97,6 +97,22 @@ func (m *Manager) List(ctx context.Context) ([]*storage.User, error) {
 	return users, nil
 }
 
+// SetActive enables or disables a user.
+func (m *Manager) SetActive(ctx context.Context, userID int64, active bool) error {
+	user, err := m.storage.GetUser(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("get user: %w", err)
+	}
+
+	user.IsActive = active
+	user.UpdatedAt = time.Now()
+
+	if err := m.storage.SaveUser(ctx, user); err != nil {
+		return fmt.Errorf("save user: %w", err)
+	}
+	return nil
+}
+
 // Delete removes a user.
 func (m *Manager) Delete(ctx context.Context, userID int64) error {
 	if err := m.storage.DeleteUser(ctx, userID); err != nil {

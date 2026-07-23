@@ -8,7 +8,7 @@ This document outlines the planned development phases for TOC.
 |-------|-------|----------|--------|
 | Phase 1 | Foundation | Weeks 1-6 | ✅ Complete |
 | Phase 2 | Core Features | Weeks 7-12 | ✅ Complete |
-| Phase 3 | Advanced Features | Weeks 13-20 | 🔜 Planned |
+| Phase 3 | Advanced Features | Weeks 13-20 | ✅ Complete |
 | Phase 4 | Production Ready | Weeks 21-26 | 🔜 Planned |
 | Phase 5 | Community | Ongoing | 🔜 Planned |
 
@@ -120,23 +120,23 @@ Phase 2 implemented all core features for daily use:
 
 ---
 
-## Phase 3: Advanced Features (Weeks 13-20)
+## Phase 3: Advanced Features (Weeks 13-20) ✅
 
 **Goal:** Add advanced functionality for power users.
 
 ### Tasks
 
-- [ ] Multi-project support
-- [ ] Workspace management
-- [ ] User management (CRUD)
-- [ ] Permission system (RBAC)
-- [ ] Plugin system
-- [ ] Aider backend adapter
-- [ ] Gemini backend adapter
-- [ ] Tool calling support
-- [ ] MCP integration
-- [ ] Webhook mode for Telegram
-- [ ] Performance optimization
+- [x] Multi-project support
+- [x] Workspace management
+- [x] User management (CRUD)
+- [x] Permission system (RBAC)
+- [x] Plugin system
+- [x] Aider backend adapter
+- [x] Gemini backend adapter
+- [x] Tool calling support
+- [x] MCP integration
+- [x] Webhook mode for Telegram
+- [x] Performance optimization
 
 ### Deliverables
 
@@ -147,11 +147,22 @@ Phase 2 implemented all core features for daily use:
 
 ### Success Criteria
 
-- [ ] Can manage multiple projects
-- [ ] Plugins can extend functionality
-- [ ] All four backends working
-- [ ] Permissions enforced correctly
-- [ ] Webhook mode stable
+- [x] Can manage multiple projects
+- [x] Plugins can extend functionality
+- [x] All four backends working
+- [x] Permissions enforced correctly
+- [x] Webhook mode stable
+
+### Summary
+
+Phase 3 implemented advanced features for power users:
+
+- **User management:** /me, /users, /ban, /unban, /role commands with admin checks
+- **Project management:** /project new/list/switch/delete with ownership enforcement
+- **RBAC permissions:** Role hierarchy (admin > user > viewer), permission middleware
+- **Backend adapters:** Aider and Gemini adapters following Claude/OpenCode pattern
+- **Webhook mode:** Telegram webhook support with polling fallback
+- **Concurrency safety:** Mutex protection for all shared maps
 
 ---
 
