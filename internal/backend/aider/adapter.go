@@ -218,9 +218,14 @@ func (a *Adapter) executeStreaming(ctx context.Context, args []string, ch chan<-
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
+			_ = cmd.Wait()
 			return ctx.Err()
 		case ch <- backend.StreamChunk{Content: scanner.Text() + "\n", Done: false}:
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		_ = cmd.Wait()
+		return fmt.Errorf("scanner error: %w", err)
 	}
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("wait command: %w", err)
