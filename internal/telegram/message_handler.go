@@ -3,7 +3,6 @@ package telegram
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -41,6 +40,10 @@ func splitMessage(text string, limit int) []string {
 // HandleMessage handles default text messages by forwarding to the active session's backend.
 func HandleMessage(adapter Adapter, sm *SessionManager) HandlerFunc {
 	return func(ctx context.Context, msg *IncomingMessage) error {
+		if msg.Document != nil {
+			return handleDocumentMessage(ctx, adapter, sm, msg)
+		}
+
 		sessionID := sm.GetActiveSession(msg.FromID)
 		if sessionID == "" {
 			return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
@@ -99,7 +102,7 @@ func HandleMessage(adapter Adapter, sm *SessionManager) HandlerFunc {
 
 		for chunk := range stream {
 			if chunk.Error != nil {
-				fmt.Fprintf(os.Stderr, "stream error: %v\n", chunk.Error)
+				sm.logger.Error().Err(chunk.Error).Int64("user_id", msg.FromID).Msg("stream error")
 				return adapter.EditMessage(ctx, msg.ChatID, processingMsg.MessageID,
 					"Backend error. Please try again.")
 			}
@@ -129,14 +132,14 @@ func HandleMessage(adapter Adapter, sm *SessionManager) HandlerFunc {
 		parts := splitMessage(finalResponse, maxTelegramMessageLength)
 
 		if err := adapter.EditMessage(ctx, msg.ChatID, processingMsg.MessageID, parts[0]); err != nil {
-			fmt.Fprintf(os.Stderr, "edit final message: %v\n", err)
+			sm.logger.Error().Err(err).Int64("user_id", msg.FromID).Msg("edit final message")
 		}
 
 		for _, part := range parts[1:] {
 			if err := adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
 				Text: part,
 			}); err != nil {
-				fmt.Fprintf(os.Stderr, "send overflow message: %v\n", err)
+				sm.logger.Error().Err(err).Int64("user_id", msg.FromID).Msg("send overflow message")
 			}
 		}
 
@@ -148,7 +151,7 @@ func HandleMessage(adapter Adapter, sm *SessionManager) HandlerFunc {
 			CreatedAt: time.Now(),
 		}
 		if err := sm.storage.SaveMessage(ctx, assistantMsg); err != nil {
-			fmt.Fprintf(os.Stderr, "save assistant message: %v\n", err)
+			sm.logger.Error().Err(err).Int64("user_id", msg.FromID).Msg("save assistant message")
 			return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
 				Text: "Failed to save response. Please try again.",
 			})
@@ -156,4 +159,98 @@ func HandleMessage(adapter Adapter, sm *SessionManager) HandlerFunc {
 
 		return nil
 	}
+}
+
+func handleDocumentMessage(ctx context.Context, adapter Adapter, sm *SessionManager, msg *IncomingMessage) error {
+	sessionID := sm.GetActiveSession(msg.FromID)
+	if sessionID == "" {
+		return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+			Text: "No active session. Use /new to create one or /sessions to switch.",
+		})
+	}
+
+	if err := sm.storage.SaveMessage(ctx, &storage.Message{
+		ID:        fmt.Sprintf("msg-%s", uuid.New().String()),
+		SessionID: sessionID,
+		Role:      storage.MessageRoleUser,
+		Content:   fmt.Sprintf("[File: %s]", msg.Document.FileName),
+		CreatedAt: time.Now(),
+	}); err != nil {
+		sm.logger.Error().Err(err).Int64("user_id", msg.FromID).Msg("save document message")
+	}
+
+	processingMsg, err := adapter.SendMessageWithResult(ctx, msg.ChatID, OutgoingMessage{
+		Text: "Processing file: " + msg.Document.FileName + "...",
+	})
+	if err != nil {
+		return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+			Text: "Failed to send message. Please try again.",
+		})
+	}
+
+	content, err := downloadFile(ctx, sm.botToken, msg.Document.FileID)
+	if err != nil {
+		sm.logger.Error().Err(err).Str("file_id", msg.Document.FileID).Msg("download file")
+		return adapter.EditMessage(ctx, msg.ChatID, processingMsg.MessageID,
+			"Failed to download file. Please try again.")
+	}
+
+	req := &backend.SendMessageRequest{
+		SessionID: sessionID,
+		Content:   fmt.Sprintf("Analyze this file: %s", msg.Document.FileName),
+		Files: []backend.FileAttachment{
+			{
+				Name:     msg.Document.FileName,
+				Content:  content,
+				MIMEType: msg.Document.MimeType,
+			},
+		},
+	}
+
+	streamCh, err := sm.backend.StreamMessage(ctx, req)
+	if err != nil {
+		return adapter.EditMessage(ctx, msg.ChatID, processingMsg.MessageID,
+			"Backend error. Please try again.")
+	}
+
+	var response strings.Builder
+	for chunk := range streamCh {
+		if chunk.Error != nil {
+			sm.logger.Error().Err(chunk.Error).Int64("user_id", msg.FromID).Msg("stream error")
+			return adapter.EditMessage(ctx, msg.ChatID, processingMsg.MessageID,
+				"Backend error. Please try again.")
+		}
+		response.WriteString(chunk.Content)
+	}
+
+	result := response.String()
+	if result == "" {
+		result = "File processed successfully."
+	}
+
+	parts := splitMessage(result, 4000)
+	if err := adapter.EditMessage(ctx, msg.ChatID, processingMsg.MessageID, parts[0]); err != nil {
+		sm.logger.Error().Err(err).Int64("user_id", msg.FromID).Msg("edit final message")
+	}
+
+	for _, part := range parts[1:] {
+		if err := adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+			Text: part,
+		}); err != nil {
+			sm.logger.Error().Err(err).Int64("user_id", msg.FromID).Msg("send overflow message")
+		}
+	}
+
+	assistantMsg := &storage.Message{
+		ID:        fmt.Sprintf("msg-%s", uuid.New().String()),
+		SessionID: sessionID,
+		Role:      storage.MessageRoleAssistant,
+		Content:   result,
+		CreatedAt: time.Now(),
+	}
+	if err := sm.storage.SaveMessage(ctx, assistantMsg); err != nil {
+		sm.logger.Error().Err(err).Int64("user_id", msg.FromID).Msg("save assistant message")
+	}
+
+	return nil
 }

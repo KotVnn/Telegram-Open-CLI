@@ -1,6 +1,10 @@
 package telegram
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/go-telegram/bot/models"
+)
 
 // InlineKeyboard represents an inline keyboard markup.
 type InlineKeyboard struct {
@@ -119,4 +123,20 @@ func (b *KeyboardBuilder) NewRow() *KeyboardBuilder {
 // Build builds the keyboard.
 func (b *KeyboardBuilder) Build() InlineKeyboard {
 	return InlineKeyboard{InlineKeyboard: b.rows}
+}
+
+// ToTelegram converts to go-telegram InlineKeyboardMarkup.
+func (k InlineKeyboard) ToTelegram() models.InlineKeyboardMarkup {
+	rows := make([][]models.InlineKeyboardButton, len(k.InlineKeyboard))
+	for i, row := range k.InlineKeyboard {
+		buttons := make([]models.InlineKeyboardButton, len(row))
+		for j, btn := range row {
+			buttons[j] = models.InlineKeyboardButton{
+				Text:         btn.Text,
+				CallbackData: btn.CallbackData,
+			}
+		}
+		rows[i] = buttons
+	}
+	return models.InlineKeyboardMarkup{InlineKeyboard: rows}
 }

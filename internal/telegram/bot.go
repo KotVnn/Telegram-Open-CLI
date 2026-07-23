@@ -3,12 +3,11 @@ package telegram
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"github.com/rs/zerolog"
 )
 
 // Adapter defines the interface for Telegram bot operations.
@@ -101,6 +100,7 @@ type Middleware func(next HandlerFunc) HandlerFunc
 // Bot implements the Adapter interface using go-telegram/bot.
 type Bot struct {
 	bot               *bot.Bot
+	logger            zerolog.Logger
 	middlewares       []Middleware
 	commandHandlers   map[string]HandlerFunc
 	messageHandlers   []messageHandler
@@ -124,11 +124,13 @@ type Config struct {
 	Mode          string
 	WebhookURL    string
 	WebhookSecret string
+	Logger        zerolog.Logger
 }
 
 // New creates a new Bot instance.
 func New(cfg Config) (*Bot, error) {
 	b := &Bot{
+		logger:          cfg.Logger,
 		commandHandlers: make(map[string]HandlerFunc),
 	}
 
@@ -301,7 +303,7 @@ func (b *Bot) handleUpdate(ctx context.Context, _ *bot.Bot, update *models.Updat
 	}
 
 	if err := chain(ctx, msg); err != nil {
-		fmt.Fprintf(os.Stderr, "handler error: %v\n", err)
+		b.logger.Error().Err(err).Str("command", msg.Command).Int64("user_id", msg.FromID).Msg("handler error")
 		_ = b.SendMessage(ctx, msg.ChatID, OutgoingMessage{
 			Text: "An error occurred. Please try again.",
 		})
@@ -331,8 +333,23 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, cq *models.CallbackQuery)
 		MessageID:    messageID,
 	}
 
-	if err := handler(ctx, cb); err != nil {
-		fmt.Fprintf(os.Stderr, "callback handler error: %v\n", err)
+	wrappedHandler := func(ctx context.Context, msg *IncomingMessage) error {
+		return handler(ctx, cb)
+	}
+
+	chain := wrappedHandler
+	for i := len(b.middlewares) - 1; i >= 0; i-- {
+		chain = b.middlewares[i](chain)
+	}
+
+	dummyMsg := &IncomingMessage{
+		ChatID:      chatID,
+		FromID:      cq.From.ID,
+		FromUsername: cq.From.Username,
+	}
+
+	if err := chain(ctx, dummyMsg); err != nil {
+		b.logger.Error().Err(err).Str("data", cb.Data).Int64("user_id", cb.FromID).Msg("callback handler error")
 	}
 }
 

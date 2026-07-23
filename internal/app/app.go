@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/KotVnn/Telegram-Open-CLI/internal/backend"
+	"github.com/KotVnn/Telegram-Open-CLI/internal/backend/claude"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/backend/opencode"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/config"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/project"
@@ -103,6 +104,10 @@ func (a *App) initBackends(ctx context.Context) error {
 		return opencode.New()
 	})
 
+	a.backends.Register("claude", func() backend.Backend {
+		return claude.New()
+	})
+
 	configs := make(map[string]backend.BackendConfig)
 	for name, cfg := range a.config.Backends {
 		configs[name] = backend.BackendConfig{
@@ -120,7 +125,8 @@ func (a *App) initBackends(ctx context.Context) error {
 
 func (a *App) initTelegram(ctx context.Context) error {
 	bot, err := telegram.New(telegram.Config{
-		Token: a.config.Telegram.Token,
+		Token:  a.config.Telegram.Token,
+		Logger: a.logger,
 	})
 	if err != nil {
 		return err
@@ -133,7 +139,7 @@ func (a *App) initTelegram(ctx context.Context) error {
 		return fmt.Errorf("get default backend: %w", err)
 	}
 
-	sessionManager := telegram.NewSessionManager(a.storage, defaultBackend)
+	sessionManager := telegram.NewSessionManager(a.storage, defaultBackend, a.logger, a.config.Telegram.Token)
 
 	bot.HandleCommand("start", telegram.HandleStart(a.bot))
 	bot.HandleCommand("help", telegram.HandleHelp(a.bot))
@@ -146,10 +152,26 @@ func (a *App) initTelegram(ctx context.Context) error {
 
 	bot.HandleDefault(telegram.HandleMessage(a.bot, sessionManager))
 
+	bot.HandleCallback("session:", telegram.HandleSessionCallback(a.bot, sessionManager))
+	bot.HandleCallback("new_session", telegram.HandleNewSessionCallback(a.bot, sessionManager))
+	bot.HandleCallback("confirm:", telegram.HandleConfirmCallback(a.bot, sessionManager))
+	bot.HandleCallback("model:", telegram.HandleModelCallback(a.bot, sessionManager))
+	bot.HandleCallback("agent:", telegram.HandleAgentCallback(a.bot, sessionManager))
+	bot.HandleCallback("cancel", telegram.HandleCancelCallback(a.bot))
+
 	bot.Use(
 		telegram.RecoveryMiddleware(a.logger),
 		telegram.LoggingMiddleware(a.logger),
 	)
+
+	if a.config.Security.RequireAuth {
+		bot.Use(telegram.AuthMiddleware(bot,
+			a.config.Telegram.AllowedUsers,
+			a.config.Telegram.AllowedGroups,
+		))
+	}
+
+	bot.Use(telegram.RateLimitMiddleware(10, 5))
 
 	return nil
 }

@@ -7,7 +7,7 @@ This document outlines the planned development phases for TOC.
 | Phase | Focus | Timeline | Status |
 |-------|-------|----------|--------|
 | Phase 1 | Foundation | Weeks 1-6 | ✅ Complete |
-| Phase 2 | Core Features | Weeks 7-12 | 🔜 Planned |
+| Phase 2 | Core Features | Weeks 7-12 | ✅ Complete |
 | Phase 3 | Advanced Features | Weeks 13-20 | 🔜 Planned |
 | Phase 4 | Production Ready | Weeks 21-26 | 🔜 Planned |
 | Phase 5 | Community | Ongoing | 🔜 Planned |
@@ -73,23 +73,23 @@ All bugs identified during Phase 1 evaluation have been fixed:
 
 ---
 
-## Phase 2: Core Features (Weeks 7-12)
+## Phase 2: Core Features (Weeks 7-12) ✅
 
 **Goal:** Implement essential features for daily use.
 
 ### Tasks
 
-- [ ] Streaming response support
-- [ ] File upload/download
-- [ ] Inline keyboards for quick actions
-- [ ] Middleware system
-- [ ] User authentication
-- [ ] Rate limiting
-- [ ] Logging (zerolog)
-- [ ] Claude Code backend adapter
-- [ ] Error handling and recovery
-- [ ] Integration tests
-- [ ] Documentation improvements
+- [x] Streaming response support
+- [x] File upload/download
+- [x] Inline keyboards for quick actions
+- [x] Middleware system
+- [x] User authentication
+- [x] Rate limiting
+- [x] Logging (zerolog)
+- [x] Claude Code backend adapter
+- [x] Error handling and recovery
+- [x] Integration tests
+- [x] Documentation improvements
 
 ### Deliverables
 
@@ -100,12 +100,23 @@ All bugs identified during Phase 1 evaluation have been fixed:
 
 ### Success Criteria
 
-- [ ] Responses stream in real-time
-- [ ] Can upload and process files
-- [ ] Inline keyboards work correctly
-- [ ] Authentication prevents unauthorized access
-- [ ] Rate limiting prevents abuse
-- [ ] All error cases handled gracefully
+- [x] Responses stream in real-time
+- [x] Can upload and process files
+- [x] Inline keyboards work correctly
+- [x] Authentication prevents unauthorized access
+- [x] Rate limiting prevents abuse
+- [x] All error cases handled gracefully
+
+### Summary
+
+Phase 2 implemented all core features for daily use:
+
+- **Middleware wiring:** AuthMiddleware and RateLimitMiddleware fully integrated
+- **Structured logging:** All `fmt.Fprintf(os.Stderr)` replaced with zerolog
+- **Claude Code adapter:** Full backend implementation with tests
+- **Inline keyboards:** ToTelegram() conversion, callback handlers for session/model/agent selection
+- **File handling:** Document upload, Telegram API download, backend attachment passing
+- **Integration tests:** Backend manager, Telegram bot, and app initialization flows
 
 ---
 
