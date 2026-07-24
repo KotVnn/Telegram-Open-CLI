@@ -99,8 +99,9 @@ func HandleMessage(adapter Adapter, sm *SessionManager) HandlerFunc {
 		}
 
 		stream, err := sm.backend.StreamMessage(ctx, &backend.SendMessageRequest{
-			SessionID: sessionID,
-			Content:   msg.Text,
+			SessionID:  sessionID,
+			Content:    msg.Text,
+			WorkingDir: session.WorkingDir,
 		})
 		if err != nil {
 			sm.logger.Error().Err(err).Int64("user_id", msg.FromID).Str("session_id", sessionID).Msg("stream message failed")

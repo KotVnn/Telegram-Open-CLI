@@ -79,12 +79,13 @@ const (
 
 // SendMessageRequest holds the request data for sending a message.
 type SendMessageRequest struct {
-	SessionID string
-	Content   string
-	Files     []FileAttachment
-	Model     string
-	Agent     string
-	Metadata  map[string]interface{}
+	SessionID  string
+	Content    string
+	Files      []FileAttachment
+	Model      string
+	Agent      string
+	WorkingDir string
+	Metadata   map[string]interface{}
 }
 
 // FileAttachment represents a file to include with a message.

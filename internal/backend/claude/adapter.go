@@ -161,7 +161,7 @@ func (a *Adapter) SendMessage(ctx context.Context, req *backend.SendMessageReque
 
 	args := a.buildArgs(session, req)
 
-	output, err := a.executeCommand(ctx, args)
+	output, err := a.executeCommand(ctx, args, req.WorkingDir)
 	if err != nil {
 		return nil, fmt.Errorf("execute command: %w", err)
 	}
@@ -188,7 +188,7 @@ func (a *Adapter) StreamMessage(ctx context.Context, req *backend.SendMessageReq
 
 		args := a.buildArgs(session, req)
 
-		if err := a.executeStreaming(ctx, args, ch); err != nil {
+		if err := a.executeStreaming(ctx, args, ch, req.WorkingDir); err != nil {
 			select {
 			case <-ctx.Done():
 				return
@@ -215,7 +215,7 @@ func (a *Adapter) Capabilities() *backend.Capabilities {
 	}
 }
 
-func (a *Adapter) executeCommand(ctx context.Context, args []string) (string, error) {
+func (a *Adapter) executeCommand(ctx context.Context, args []string, workingDir string) (string, error) {
 	if a.config.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, a.config.Timeout)
@@ -224,7 +224,9 @@ func (a *Adapter) executeCommand(ctx context.Context, args []string) (string, er
 
 	cmd := exec.CommandContext(ctx, a.config.Command, args...)
 
-	if a.config.WorkingDir != "" {
+	if workingDir != "" {
+		cmd.Dir = workingDir
+	} else if a.config.WorkingDir != "" {
 		cmd.Dir = a.config.WorkingDir
 	}
 
@@ -245,7 +247,7 @@ func (a *Adapter) executeCommand(ctx context.Context, args []string) (string, er
 	return stdout.String(), nil
 }
 
-func (a *Adapter) executeStreaming(ctx context.Context, args []string, ch chan<- backend.StreamChunk) error {
+func (a *Adapter) executeStreaming(ctx context.Context, args []string, ch chan<- backend.StreamChunk, workingDir string) error {
 	if a.config.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, a.config.Timeout)
@@ -254,7 +256,9 @@ func (a *Adapter) executeStreaming(ctx context.Context, args []string, ch chan<-
 
 	cmd := exec.CommandContext(ctx, a.config.Command, args...)
 
-	if a.config.WorkingDir != "" {
+	if workingDir != "" {
+		cmd.Dir = workingDir
+	} else if a.config.WorkingDir != "" {
 		cmd.Dir = a.config.WorkingDir
 	}
 
