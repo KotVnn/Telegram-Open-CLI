@@ -3,6 +3,7 @@ package telegram
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -140,6 +141,14 @@ func New(cfg Config) (*Bot, error) {
 
 	opts := []bot.Option{
 		bot.WithDefaultHandler(b.handleUpdate),
+		bot.WithErrorsHandler(func(err error) {
+			// Log all errors with the bot's structured logger
+			if errors.Is(err, bot.ErrorConflict) {
+				b.logger.Warn().Err(err).Msg("bot conflict detected (another instance may be running)")
+			} else {
+				b.logger.Error().Err(err).Msg("bot error")
+			}
+		}),
 	}
 
 	bot, err := bot.New(cfg.Token, opts...)
@@ -173,8 +182,12 @@ func (b *Bot) Start(ctx context.Context) error {
 		b.logger.Warn().Err(err).Msg("failed to delete webhook (may not exist)")
 	}
 
-	// Wait for Telegram to release the previous connection
-	time.Sleep(3 * time.Second)
+	// Wait for Telegram server to release the previous getUpdates session.
+	// Telegram maintains server-side state for 30-60+ seconds after client disconnect.
+	// Without this delay, the new getUpdates call will conflict with the stale session.
+	b.logger.Info().Msg("waiting for Telegram session cleanup (30s)...")
+	time.Sleep(30 * time.Second)
+	b.logger.Info().Msg("starting polling")
 
 	b.bot.Start(ctx)
 	return nil
