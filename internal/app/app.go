@@ -175,8 +175,8 @@ func (a *App) initTelegram(ctx context.Context) error {
 		return fmt.Errorf("get default backend: %w", err)
 	}
 
-	sessionManager := telegram.NewSessionManager(a.storage, defaultBackend, a.logger, a.config.Telegram.Token)
 	projectManager := telegram.NewProjectManager(a.projects, a.storage)
+	sessionManager := telegram.NewSessionManager(a.storage, defaultBackend, projectManager, a.logger, a.config.Telegram.Token)
 
 	bot.HandleCommand("start", telegram.HandleStart(a.bot))
 	bot.HandleCommand("help", telegram.HandleHelp(a.bot))

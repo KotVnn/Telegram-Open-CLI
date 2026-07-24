@@ -16,6 +16,7 @@ import (
 type SessionManager struct {
 	storage        storage.Storage
 	backend        backend.Backend
+	projectManager *ProjectManager
 	logger         zerolog.Logger
 	botToken       string
 	mu             sync.RWMutex
@@ -24,10 +25,11 @@ type SessionManager struct {
 }
 
 // NewSessionManager creates a new session manager.
-func NewSessionManager(storage storage.Storage, backend backend.Backend, logger zerolog.Logger, botToken string) *SessionManager {
+func NewSessionManager(storage storage.Storage, backend backend.Backend, pm *ProjectManager, logger zerolog.Logger, botToken string) *SessionManager {
 	return &SessionManager{
 		storage:        storage,
 		backend:        backend,
+		projectManager: pm,
 		logger:         logger,
 		botToken:       botToken,
 		activeSessions: make(map[int64]string),
@@ -59,13 +61,29 @@ func (m *SessionManager) ClearActiveSession(userID int64) {
 // HandleNew handles the /new [name] command.
 func HandleNew(adapter Adapter, sm *SessionManager) HandlerFunc {
 	return func(ctx context.Context, msg *IncomingMessage) error {
+		projectID := sm.projectManager.GetActiveProject(msg.FromID)
+		if projectID == "" {
+			return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+				Text: "No active project. Use /project new <name> <path> to create one first.",
+			})
+		}
+
+		project, err := sm.projectManager.manager.Get(ctx, projectID)
+		if err != nil {
+			return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+				Text: "Active project not found. Use /project list to see available projects.",
+			})
+		}
+
 		name := "Untitled Session"
 		if len(msg.Args) > 0 {
 			name = msg.Args[0]
 		}
 
 		session, err := sm.backend.CreateSession(ctx, backend.SessionOpts{
-			Title: name,
+			Title:      name,
+			ProjectID:  projectID,
+			WorkingDir: project.Path,
 		})
 		if err != nil {
 			return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
@@ -124,7 +142,14 @@ func HandleSessions(adapter Adapter, sm *SessionManager) HandlerFunc {
 			if s.ID == activeSession {
 				status += " (active)"
 			}
-			text += fmt.Sprintf("ID: %s\nName: %s\nStatus: %s\n\n", s.ID, s.Title, status)
+			projectInfo := ""
+			if s.ProjectID != "" {
+				p, err := sm.storage.GetProject(ctx, s.ProjectID)
+				if err == nil {
+					projectInfo = fmt.Sprintf("\nProject: %s (%s)", p.Name, p.Path)
+				}
+			}
+			text += fmt.Sprintf("ID: %s\nName: %s\nStatus: %s%s\n\n", s.ID, s.Title, status, projectInfo)
 		}
 
 		return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
@@ -222,6 +247,13 @@ func HandleStatus(adapter Adapter, sm *SessionManager) HandlerFunc {
 
 		text := fmt.Sprintf("Active Session:\n\nID: %s\nName: %s\nStatus: %s\nBackend: %s\nModel: %s\nAgent: %s\nCreated: %s\nUpdated: %s",
 			session.ID, session.Title, session.Status, session.Backend, session.Model, session.Agent, session.CreatedAt.Format(time.RFC3339), session.UpdatedAt.Format(time.RFC3339))
+
+		if session.ProjectID != "" {
+			p, err := sm.storage.GetProject(ctx, session.ProjectID)
+			if err == nil {
+				text += fmt.Sprintf("\nProject: %s (%s)", p.Name, p.Path)
+			}
+		}
 
 		return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
 			Text: text,

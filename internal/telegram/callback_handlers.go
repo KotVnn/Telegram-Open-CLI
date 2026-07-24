@@ -126,15 +126,27 @@ func HandleAgentCallback(adapter Adapter, sm *SessionManager) CallbackHandlerFun
 	return func(ctx context.Context, cb *CallbackQuery) error {
 		agent := strings.TrimPrefix(cb.Data, "agent:")
 
+		projectID := sm.projectManager.GetActiveProject(cb.FromID)
+		if projectID == "" {
+			return adapter.AnswerCallback(ctx, cb.ID, "No active project. Use /project new first.")
+		}
+
+		project, err := sm.projectManager.manager.Get(ctx, projectID)
+		if err != nil {
+			return adapter.AnswerCallback(ctx, cb.ID, "Active project not found")
+		}
+
 		sm.mu.Lock()
 		model := sm.pendingModels[cb.FromID]
 		delete(sm.pendingModels, cb.FromID)
 		sm.mu.Unlock()
 
 		session, err := sm.backend.CreateSession(ctx, backend.SessionOpts{
-			Title: "New Session",
-			Model: model,
-			Agent: agent,
+			Title:      "New Session",
+			Model:      model,
+			Agent:      agent,
+			ProjectID:  projectID,
+			WorkingDir: project.Path,
 		})
 		if err != nil {
 			return adapter.AnswerCallback(ctx, cb.ID, "Failed to create session")
