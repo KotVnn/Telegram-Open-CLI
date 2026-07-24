@@ -103,8 +103,9 @@ func HandleMessage(adapter Adapter, sm *SessionManager) HandlerFunc {
 			Content:   msg.Text,
 		})
 		if err != nil {
+			sm.logger.Error().Err(err).Int64("user_id", msg.FromID).Str("session_id", sessionID).Msg("stream message failed")
 			return adapter.EditMessage(ctx, msg.ChatID, processingMsg.MessageID,
-				"Backend error. Please try again.")
+				fmt.Sprintf("Backend error: %v", err))
 		}
 
 		var responseBuilder strings.Builder

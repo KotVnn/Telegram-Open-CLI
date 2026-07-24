@@ -163,10 +163,8 @@ func (a *Adapter) DeleteSession(ctx context.Context, id string) error {
 }
 
 func (a *Adapter) SendMessage(ctx context.Context, req *backend.SendMessageRequest) (*backend.SendMessageResponse, error) {
-	session, err := a.GetSession(ctx, req.SessionID)
-	if err != nil {
-		return nil, err
-	}
+	// Session lookup is optional - TOC manages sessions in its own storage.
+	session, _ := a.GetSession(ctx, req.SessionID)
 
 	args := a.buildArgs(session, req)
 
@@ -185,10 +183,9 @@ func (a *Adapter) SendMessage(ctx context.Context, req *backend.SendMessageReque
 }
 
 func (a *Adapter) StreamMessage(ctx context.Context, req *backend.SendMessageRequest) (<-chan backend.StreamChunk, error) {
-	session, err := a.GetSession(ctx, req.SessionID)
-	if err != nil {
-		return nil, err
-	}
+	// Session lookup is optional - TOC manages sessions in its own storage.
+	// We don't pass --session to OpenCode, so we don't need the backend session.
+	session, _ := a.GetSession(ctx, req.SessionID)
 
 	ch := make(chan backend.StreamChunk, 100)
 
