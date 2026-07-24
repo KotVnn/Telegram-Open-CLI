@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
@@ -155,11 +156,25 @@ func (b *Bot) Start(ctx context.Context) error {
 		return b.startWebhook(ctx)
 	}
 
+	// Check webhook status for debugging
+	if info, err := b.bot.GetWebhookInfo(ctx); err == nil {
+		b.logger.Info().
+			Bool("has_webhook", info.URL != "").
+			Int("pending_updates", info.PendingUpdateCount).
+			Str("last_error", info.LastErrorMessage).
+			Msg("webhook status")
+	}
+
 	// Delete any existing webhook before starting polling
 	// This prevents "Conflict: terminated by other getUpdates request" errors
-	if _, err := b.bot.DeleteWebhook(ctx, &bot.DeleteWebhookParams{}); err != nil {
+	if _, err := b.bot.DeleteWebhook(ctx, &bot.DeleteWebhookParams{
+		DropPendingUpdates: true,
+	}); err != nil {
 		b.logger.Warn().Err(err).Msg("failed to delete webhook (may not exist)")
 	}
+
+	// Wait for Telegram to release the previous connection
+	time.Sleep(3 * time.Second)
 
 	b.bot.Start(ctx)
 	return nil
