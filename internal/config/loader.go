@@ -55,6 +55,15 @@ func loadConfig(ctx context.Context) (*Config, error) {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
 
+	// Expand ~ in storage path
+	if cfg.Storage.Path != "" {
+		expanded, err := expandTilde(cfg.Storage.Path)
+		if err != nil {
+			return nil, fmt.Errorf("expand storage path: %w", err)
+		}
+		cfg.Storage.Path = expanded
+	}
+
 	if err := validate(&cfg); err != nil {
 		return nil, err
 	}
@@ -68,4 +77,17 @@ func defaultStoragePath() string {
 		return "toc.db"
 	}
 	return filepath.Join(home, ".toc", "toc.db")
+}
+
+func expandTilde(path string) (string, error) {
+	if !strings.HasPrefix(path, "~") {
+		return path, nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("get home dir: %w", err)
+	}
+
+	return filepath.Join(home, path[1:]), nil
 }
