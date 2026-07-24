@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"github.com/KotVnn/Telegram-Open-CLI/internal/backend"
 	"github.com/KotVnn/Telegram-Open-CLI/internal/storage"
 )
@@ -14,16 +16,22 @@ import (
 type SessionManager struct {
 	storage        storage.Storage
 	backend        backend.Backend
+	logger         zerolog.Logger
+	botToken       string
 	mu             sync.RWMutex
-	activeSessions map[int64]string // userID -> sessionID
+	activeSessions map[int64]string
+	pendingModels  map[int64]string
 }
 
 // NewSessionManager creates a new session manager.
-func NewSessionManager(storage storage.Storage, backend backend.Backend) *SessionManager {
+func NewSessionManager(storage storage.Storage, backend backend.Backend, logger zerolog.Logger, botToken string) *SessionManager {
 	return &SessionManager{
 		storage:        storage,
 		backend:        backend,
+		logger:         logger,
+		botToken:       botToken,
 		activeSessions: make(map[int64]string),
+		pendingModels:  make(map[int64]string),
 	}
 }
 

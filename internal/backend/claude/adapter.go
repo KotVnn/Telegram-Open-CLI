@@ -1,4 +1,4 @@
-package opencode
+package claude
 
 import (
 	"bufio"
@@ -17,13 +17,13 @@ import (
 )
 
 var (
-	ErrBackendDisabled  = errors.New("backend disabled")
-	ErrMissingCommand   = errors.New("backend requires a command")
-	ErrNotInitialized   = errors.New("backend not initialized")
-	ErrSessionNotFound  = errors.New("session not found")
+	ErrBackendDisabled = errors.New("backend disabled")
+	ErrMissingCommand  = errors.New("backend requires a command")
+	ErrNotInitialized  = errors.New("backend not initialized")
+	ErrSessionNotFound = errors.New("session not found")
 )
 
-// Adapter implements the backend.Backend interface for OpenCode.
+// Adapter implements the backend.Backend interface for Claude Code.
 type Adapter struct {
 	config      backend.BackendConfig
 	sessions    map[string]*backend.Session
@@ -39,11 +39,11 @@ func New() *Adapter {
 }
 
 func (a *Adapter) Name() string {
-	return "opencode"
+	return "claude"
 }
 
 func (a *Adapter) Description() string {
-	return "OpenCode AI Coding Agent"
+	return "Claude Code AI Coding Agent"
 }
 
 func (a *Adapter) Version() string {
@@ -207,11 +207,11 @@ func (a *Adapter) Capabilities() *backend.Capabilities {
 	return &backend.Capabilities{
 		SupportsStreaming:   true,
 		SupportsFiles:       true,
-		SupportsMultiModal:  false,
-		SupportsToolCalling: false,
-		MaxTokens:           100000,
-		SupportedModels:     []string{"default"},
-		SupportedAgents:     []string{"build", "plan"},
+		SupportsMultiModal:  true,
+		SupportsToolCalling: true,
+		MaxTokens:           200000,
+		SupportedModels:     []string{"claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-haiku-35-20241022"},
+		SupportedAgents:     []string{"default"},
 	}
 }
 
@@ -311,10 +311,6 @@ func (a *Adapter) buildArgs(session *backend.Session, req *backend.SendMessageRe
 
 	if req.Model != "" {
 		args = append(args, "--model", req.Model)
-	}
-
-	if req.Agent != "" {
-		args = append(args, "--agent", req.Agent)
 	}
 
 	args = append(args, req.Content)

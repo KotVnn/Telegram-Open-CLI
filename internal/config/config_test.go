@@ -28,7 +28,7 @@ command = "opencode"
 args = ["run", "--format", "json"]
 
 [storage]
-path = ""
+path = "/tmp/test.db"
 
 [security]
 require_auth = true
@@ -76,7 +76,7 @@ enabled = true
 command = "opencode"
 
 [storage]
-path = ""
+path = "/tmp/test.db"
 
 [security]
 require_auth = true
@@ -116,7 +116,7 @@ enabled = true
 command = "opencode"
 
 [storage]
-path = ""
+path = "/tmp/test.db"
 
 [security]
 require_auth = true
@@ -156,7 +156,7 @@ enabled = true
 command = "opencode"
 
 [storage]
-path = ""
+path = "/tmp/test.db"
 
 [security]
 require_auth = true
@@ -194,8 +194,11 @@ func TestValidate(t *testing.T) {
 				Telegram: TelegramConfig{
 					Token: "test-token",
 				},
+				Storage: StorageConfig{
+					Path: "/tmp/test.db",
+				},
 				Backends: map[string]Backend{
-					"opencode": {Enabled: true},
+					"opencode": {Enabled: true, Command: "opencode"},
 				},
 			},
 			wantErr: nil,
@@ -303,7 +306,7 @@ enabled = true
 command = "opencode"
 
 [storage]
-path = ""
+path = "/tmp/test.db"
 
 [security]
 require_auth = true
@@ -342,7 +345,7 @@ enabled = true
 command = "opencode"
 
 [storage]
-path = ""
+path = "/tmp/test.db"
 
 [security]
 require_auth = true
@@ -386,7 +389,7 @@ command = "opencode"
 args = ["run", "--format", "json"]
 
 [storage]
-path = ""
+path = "/tmp/test.db"
 
 [security]
 require_auth = true
@@ -434,7 +437,7 @@ command = "opencode"
 args = ["run", "--format", "json"]
 
 [storage]
-path = ""
+path = "/tmp/test.db"
 
 [security]
 require_auth = true

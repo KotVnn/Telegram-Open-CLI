@@ -731,7 +731,8 @@ func TestAuthMiddlewarePrivateChatSkipsChatCheck(t *testing.T) {
 }
 
 func TestRateLimitMiddleware(t *testing.T) {
-	mw := RateLimitMiddleware(10, 1)
+	adapter := &mockAdapter{}
+	mw := RateLimitMiddleware(adapter, 10, 1)
 
 	handler := func(ctx context.Context, msg *IncomingMessage) error {
 		return nil
@@ -745,7 +746,8 @@ func TestRateLimitMiddleware(t *testing.T) {
 }
 
 func TestRateLimitMiddlewareBlocks(t *testing.T) {
-	mw := RateLimitMiddleware(1, 1)
+	adapter := &mockAdapter{}
+	mw := RateLimitMiddleware(adapter, 1, 1)
 
 	handlerCalled := false
 	handler := func(ctx context.Context, msg *IncomingMessage) error {
@@ -860,4 +862,65 @@ func TestBotStop(t *testing.T) {
 	b := newTestBot()
 	err := b.Stop(context.Background())
 	assert.NoError(t, err)
+}
+
+func TestSplitMessage(t *testing.T) {
+	tests := []struct {
+		name     string
+		text     string
+		limit    int
+		expected []string
+	}{
+		{
+			name:     "short message",
+			text:     "Hello",
+			limit:    4096,
+			expected: []string{"Hello"},
+		},
+		{
+			name:     "exact limit",
+			text:     "Hello World",
+			limit:    11,
+			expected: []string{"Hello World"},
+		},
+		{
+			name:     "split at newline",
+			text:     "Line 1\nLine 2\nLine 3",
+			limit:    12,
+			expected: []string{"Line 1", "Line 2", "Line 3"},
+		},
+		{
+			name:     "split at limit when no newline",
+			text:     "Hello World Foo",
+			limit:    10,
+			expected: []string{"Hello Worl", "d Foo"},
+		},
+		{
+			name:     "long message with newlines",
+			text:     "AAAAAAAAAA\nBBBBBBBBBB\nCCCCCCCCCC",
+			limit:    10,
+			expected: []string{"AAAAAAAAAA", "BBBBBBBBBB", "CCCCCCCCCC"},
+		},
+		{
+			name:     "long message without newlines",
+			text:     "AAAAAAAAAABBBBBBBBBBCCCCCCCCCC",
+			limit:    10,
+			expected: []string{"AAAAAAAAAA", "BBBBBBBBBB", "CCCCCCCCCC"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := splitMessage(tt.text, tt.limit)
+			if len(result) != len(tt.expected) {
+				t.Errorf("splitMessage() returned %d parts, expected %d", len(result), len(tt.expected))
+				return
+			}
+			for i, part := range result {
+				if part != tt.expected[i] {
+					t.Errorf("part %d = %q, expected %q", i, part, tt.expected[i])
+				}
+			}
+		})
+	}
 }

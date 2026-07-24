@@ -8,6 +8,15 @@ import (
 	"gorm.io/gorm"
 )
 
+var allowedOrderBy = map[string]bool{
+	"created_at ASC":  true,
+	"created_at DESC": true,
+	"updated_at ASC":  true,
+	"updated_at DESC": true,
+	"title ASC":       true,
+	"title DESC":      true,
+}
+
 // SQLite implements Storage using SQLite via GORM.
 type SQLite struct {
 	db *gorm.DB
@@ -67,6 +76,9 @@ func (s *SQLite) ListSessions(ctx context.Context, filter SessionFilter) ([]*Ses
 
 	order := filter.OrderBy
 	if order == "" {
+		order = "updated_at DESC"
+	}
+	if !allowedOrderBy[order] {
 		order = "updated_at DESC"
 	}
 	query = query.Order(order)

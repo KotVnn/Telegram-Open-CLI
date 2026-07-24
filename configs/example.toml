@@ -68,3 +68,10 @@ format = "console"
 
 # Log output: stdout, stderr, or file path
 output = "stdout"
+
+[metrics]
+# Enable Prometheus metrics endpoint
+enabled = false
+
+# Metrics server listen address
+listen = ":9090"

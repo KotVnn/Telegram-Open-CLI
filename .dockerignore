@@ -1,0 +1,14 @@
+**/*.md
+**/*.log
+**/*.db
+**/*.out
+.git
+.github
+.golangci.yml
+.goreleaser.yml
+reports/
+tmp/
+vendor/
+*.exe
+*.test
+*.prof

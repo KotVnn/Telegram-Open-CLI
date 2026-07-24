@@ -14,6 +14,13 @@ type Config struct {
 	Backends       map[string]Backend `mapstructure:"backends" toml:"backends"`
 	Security       SecurityConfig    `mapstructure:"security" toml:"security"`
 	Logging        LoggingConfig     `mapstructure:"logging" toml:"logging"`
+	Metrics        MetricsConfig     `mapstructure:"metrics" toml:"metrics"`
+}
+
+// MetricsConfig holds metrics server configuration.
+type MetricsConfig struct {
+	Enabled bool   `mapstructure:"enabled" toml:"enabled"`
+	Listen  string `mapstructure:"listen" toml:"listen"`
 }
 
 // TelegramConfig holds Telegram bot configuration.

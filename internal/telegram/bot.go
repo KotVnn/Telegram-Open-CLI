@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
+	"github.com/rs/zerolog"
 )
 
 // Adapter defines the interface for Telegram bot operations.
@@ -101,6 +101,8 @@ type Middleware func(next HandlerFunc) HandlerFunc
 // Bot implements the Adapter interface using go-telegram/bot.
 type Bot struct {
 	bot               *bot.Bot
+	logger            zerolog.Logger
+	config            Config
 	middlewares       []Middleware
 	commandHandlers   map[string]HandlerFunc
 	messageHandlers   []messageHandler
@@ -121,15 +123,18 @@ type callbackHandler struct {
 // Config holds Telegram bot configuration.
 type Config struct {
 	Token         string
-	Mode          string
+	Mode          string // "polling" or "webhook"
 	WebhookURL    string
 	WebhookSecret string
+	Logger        zerolog.Logger
 }
 
 // New creates a new Bot instance.
 func New(cfg Config) (*Bot, error) {
 	b := &Bot{
+		logger:          cfg.Logger,
 		commandHandlers: make(map[string]HandlerFunc),
+		config:          cfg,
 	}
 
 	opts := []bot.Option{
@@ -146,11 +151,31 @@ func New(cfg Config) (*Bot, error) {
 }
 
 func (b *Bot) Start(ctx context.Context) error {
+	if b.config.Mode == "webhook" && b.config.WebhookURL != "" {
+		return b.startWebhook(ctx)
+	}
+	b.bot.Start(ctx)
+	return nil
+}
+
+func (b *Bot) startWebhook(ctx context.Context) error {
+	params := &bot.SetWebhookParams{
+		URL: b.config.WebhookURL,
+	}
+	if b.config.WebhookSecret != "" {
+		params.SecretToken = b.config.WebhookSecret
+	}
+
+	if _, err := b.bot.SetWebhook(ctx, params); err != nil {
+		return fmt.Errorf("set webhook: %w", err)
+	}
+
 	b.bot.Start(ctx)
 	return nil
 }
 
 func (b *Bot) Stop(ctx context.Context) error {
+	b.logger.Info().Msg("stopping telegram bot")
 	return nil
 }
 
@@ -301,7 +326,7 @@ func (b *Bot) handleUpdate(ctx context.Context, _ *bot.Bot, update *models.Updat
 	}
 
 	if err := chain(ctx, msg); err != nil {
-		fmt.Fprintf(os.Stderr, "handler error: %v\n", err)
+		b.logger.Error().Err(err).Str("command", msg.Command).Int64("user_id", msg.FromID).Msg("handler error")
 		_ = b.SendMessage(ctx, msg.ChatID, OutgoingMessage{
 			Text: "An error occurred. Please try again.",
 		})
@@ -309,16 +334,22 @@ func (b *Bot) handleUpdate(ctx context.Context, _ *bot.Bot, update *models.Updat
 }
 
 func (b *Bot) handleCallbackQuery(ctx context.Context, cq *models.CallbackQuery) {
+	if cq.Message.Type != models.MaybeInaccessibleMessageTypeMessage {
+		_ = b.AnswerCallback(ctx, cq.ID, "")
+		return
+	}
+
 	var chatID int64
 	var messageID int
 
-	if cq.Message.Type == models.MaybeInaccessibleMessageTypeMessage && cq.Message.Message != nil {
+	if cq.Message.Message != nil {
 		chatID = cq.Message.Message.Chat.ID
 		messageID = cq.Message.Message.ID
 	}
 
 	handler := b.resolveCallbackHandler(cq.Data)
 	if handler == nil {
+		_ = b.AnswerCallback(ctx, cq.ID, "")
 		return
 	}
 
@@ -331,9 +362,26 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, cq *models.CallbackQuery)
 		MessageID:    messageID,
 	}
 
-	if err := handler(ctx, cb); err != nil {
-		fmt.Fprintf(os.Stderr, "callback handler error: %v\n", err)
+	wrappedHandler := func(ctx context.Context, msg *IncomingMessage) error {
+		return handler(ctx, cb)
 	}
+
+	chain := wrappedHandler
+	for i := len(b.middlewares) - 1; i >= 0; i-- {
+		chain = b.middlewares[i](chain)
+	}
+
+	dummyMsg := &IncomingMessage{
+		ChatID:      chatID,
+		FromID:      cq.From.ID,
+		FromUsername: cq.From.Username,
+	}
+
+	if err := chain(ctx, dummyMsg); err != nil {
+		b.logger.Error().Err(err).Str("data", cb.Data).Int64("user_id", cb.FromID).Msg("callback handler error")
+	}
+
+	_ = b.AnswerCallback(ctx, cq.ID, "")
 }
 
 func (b *Bot) resolveCallbackHandler(data string) CallbackHandlerFunc {
@@ -373,6 +421,10 @@ func parseIncomingMessage(update *models.Update) *IncomingMessage {
 	}
 
 	msg := update.Message
+	if msg.From == nil {
+		return nil
+	}
+
 	result := &IncomingMessage{
 		MessageID:     msg.ID,
 		ChatID:        msg.Chat.ID,

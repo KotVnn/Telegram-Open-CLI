@@ -1,4 +1,4 @@
-package opencode
+package aider
 
 import (
 	"bufio"
@@ -17,13 +17,13 @@ import (
 )
 
 var (
-	ErrBackendDisabled  = errors.New("backend disabled")
-	ErrMissingCommand   = errors.New("backend requires a command")
-	ErrNotInitialized   = errors.New("backend not initialized")
-	ErrSessionNotFound  = errors.New("session not found")
+	ErrBackendDisabled = errors.New("backend disabled")
+	ErrMissingCommand  = errors.New("backend requires a command")
+	ErrNotInitialized  = errors.New("backend not initialized")
+	ErrSessionNotFound = errors.New("session not found")
 )
 
-// Adapter implements the backend.Backend interface for OpenCode.
+// Adapter implements the backend.Backend interface for Aider.
 type Adapter struct {
 	config      backend.BackendConfig
 	sessions    map[string]*backend.Session
@@ -38,27 +38,17 @@ func New() *Adapter {
 	}
 }
 
-func (a *Adapter) Name() string {
-	return "opencode"
-}
-
-func (a *Adapter) Description() string {
-	return "OpenCode AI Coding Agent"
-}
-
-func (a *Adapter) Version() string {
-	return "1.0.0"
-}
+func (a *Adapter) Name() string        { return "aider" }
+func (a *Adapter) Description() string  { return "Aider AI Coding Agent" }
+func (a *Adapter) Version() string      { return "1.0.0" }
 
 func (a *Adapter) Initialize(ctx context.Context, config backend.BackendConfig) error {
 	if !config.Enabled {
 		return fmt.Errorf("backend %s: %w", a.Name(), ErrBackendDisabled)
 	}
-
 	if config.Command == "" {
 		return fmt.Errorf("backend %s: %w", a.Name(), ErrMissingCommand)
 	}
-
 	a.config = config
 	a.initialized = true
 	return nil
@@ -74,7 +64,6 @@ func (a *Adapter) Start(ctx context.Context) error {
 func (a *Adapter) Stop(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-
 	a.sessions = make(map[string]*backend.Session)
 	a.initialized = false
 	return nil
@@ -84,19 +73,16 @@ func (a *Adapter) Health(ctx context.Context) error {
 	if !a.initialized {
 		return fmt.Errorf("backend %s: %w", a.Name(), ErrNotInitialized)
 	}
-
 	_, err := exec.LookPath(a.config.Command)
 	if err != nil {
 		return fmt.Errorf("command %s not found: %w", a.config.Command, err)
 	}
-
 	return nil
 }
 
 func (a *Adapter) CreateSession(ctx context.Context, opts backend.SessionOpts) (*backend.Session, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-
 	session := &backend.Session{
 		ID:         uuid.New().String(),
 		Backend:    a.Name(),
@@ -110,7 +96,6 @@ func (a *Adapter) CreateSession(ctx context.Context, opts backend.SessionOpts) (
 		UpdatedAt:  time.Now(),
 		Metadata:   opts.Metadata,
 	}
-
 	a.sessions[session.ID] = session
 	return session, nil
 }
@@ -118,37 +103,31 @@ func (a *Adapter) CreateSession(ctx context.Context, opts backend.SessionOpts) (
 func (a *Adapter) GetSession(ctx context.Context, id string) (*backend.Session, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
-
 	session, ok := a.sessions[id]
 	if !ok {
 		return nil, fmt.Errorf("session %s: %w", id, ErrSessionNotFound)
 	}
-
 	return session, nil
 }
 
 func (a *Adapter) ListSessions(ctx context.Context, projectID string) ([]*backend.Session, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
-
 	var sessions []*backend.Session
-	for _, session := range a.sessions {
-		if projectID == "" || session.ProjectID == projectID {
-			sessions = append(sessions, session)
+	for _, s := range a.sessions {
+		if projectID == "" || s.ProjectID == projectID {
+			sessions = append(sessions, s)
 		}
 	}
-
 	return sessions, nil
 }
 
 func (a *Adapter) DeleteSession(ctx context.Context, id string) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-
 	if _, ok := a.sessions[id]; !ok {
 		return fmt.Errorf("session %s: %w", id, ErrSessionNotFound)
 	}
-
 	delete(a.sessions, id)
 	return nil
 }
@@ -158,21 +137,16 @@ func (a *Adapter) SendMessage(ctx context.Context, req *backend.SendMessageReque
 	if err != nil {
 		return nil, err
 	}
-
 	args := a.buildArgs(session, req)
-
 	output, err := a.executeCommand(ctx, args)
 	if err != nil {
 		return nil, fmt.Errorf("execute command: %w", err)
 	}
-
-	response := &backend.SendMessageResponse{
+	return &backend.SendMessageResponse{
 		ID:       uuid.New().String(),
 		Content:  output,
 		Metadata: make(map[string]interface{}),
-	}
-
-	return response, nil
+	}, nil
 }
 
 func (a *Adapter) StreamMessage(ctx context.Context, req *backend.SendMessageRequest) (<-chan backend.StreamChunk, error) {
@@ -180,38 +154,30 @@ func (a *Adapter) StreamMessage(ctx context.Context, req *backend.SendMessageReq
 	if err != nil {
 		return nil, err
 	}
-
 	ch := make(chan backend.StreamChunk, 100)
-
 	go func() {
 		defer close(ch)
-
 		args := a.buildArgs(session, req)
-
 		if err := a.executeStreaming(ctx, args, ch); err != nil {
 			select {
 			case <-ctx.Done():
 				return
-			case ch <- backend.StreamChunk{
-				Error: fmt.Errorf("streaming failed: %w", err),
-				Done:  true,
-			}:
+			case ch <- backend.StreamChunk{Error: fmt.Errorf("streaming failed: %w", err), Done: true}:
 			}
 		}
 	}()
-
 	return ch, nil
 }
 
 func (a *Adapter) Capabilities() *backend.Capabilities {
 	return &backend.Capabilities{
 		SupportsStreaming:   true,
-		SupportsFiles:       true,
+		SupportsFiles:       false,
 		SupportsMultiModal:  false,
 		SupportsToolCalling: false,
-		MaxTokens:           100000,
+		MaxTokens:           128000,
 		SupportedModels:     []string{"default"},
-		SupportedAgents:     []string{"build", "plan"},
+		SupportedAgents:     []string{"default"},
 	}
 }
 
@@ -223,25 +189,20 @@ func (a *Adapter) executeCommand(ctx context.Context, args []string) (string, er
 	}
 
 	cmd := exec.CommandContext(ctx, a.config.Command, args...)
-
 	if a.config.WorkingDir != "" {
 		cmd.Dir = a.config.WorkingDir
 	}
-
 	env := os.Environ()
 	for k, v := range a.config.Environment {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 	cmd.Env = env
-
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("command failed: %w\nstderr: %s", err, stderr.String())
 	}
-
 	return stdout.String(), nil
 }
 
@@ -253,26 +214,21 @@ func (a *Adapter) executeStreaming(ctx context.Context, args []string, ch chan<-
 	}
 
 	cmd := exec.CommandContext(ctx, a.config.Command, args...)
-
 	if a.config.WorkingDir != "" {
 		cmd.Dir = a.config.WorkingDir
 	}
-
 	env := os.Environ()
 	for k, v := range a.config.Environment {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 	cmd.Env = env
-
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("get stdout pipe: %w", err)
 	}
-
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start command: %w", err)
 	}
-
 	scanner := bufio.NewScanner(stdout)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024) // 1MB max line size
 	for scanner.Scan() {
@@ -280,44 +236,26 @@ func (a *Adapter) executeStreaming(ctx context.Context, args []string, ch chan<-
 		case <-ctx.Done():
 			_ = cmd.Wait()
 			return ctx.Err()
-		case ch <- backend.StreamChunk{
-			Content: scanner.Text() + "\n",
-			Done:    false,
-		}:
+		case ch <- backend.StreamChunk{Content: scanner.Text() + "\n", Done: false}:
 		}
 	}
-
 	if err := scanner.Err(); err != nil {
 		_ = cmd.Wait()
 		return fmt.Errorf("scanner error: %w", err)
 	}
-
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("wait command: %w", err)
 	}
-
 	ch <- backend.StreamChunk{Done: true}
-
 	return nil
 }
 
 func (a *Adapter) buildArgs(session *backend.Session, req *backend.SendMessageRequest) []string {
 	args := make([]string, len(a.config.Args))
 	copy(args, a.config.Args)
-
-	if session != nil && session.ID != "" {
-		args = append(args, "--session", session.ID)
-	}
-
 	if req.Model != "" {
 		args = append(args, "--model", req.Model)
 	}
-
-	if req.Agent != "" {
-		args = append(args, "--agent", req.Agent)
-	}
-
-	args = append(args, req.Content)
-
+	args = append(args, "--message", req.Content)
 	return args
 }

@@ -25,13 +25,27 @@ func HandleHelp(adapter Adapter) HandlerFunc {
 /start - Start the bot
 /help - Show this help message
 /version - Show version info
+/me - Show your user info
 
 Session commands:
 /new [name] - Create a new session
 /sessions - List all sessions
 /switch <id> - Switch to a session
 /close [id] - Close current or specified session
-/status - Show current session status`
+/status - Show current session status
+
+Project commands:
+/project - Show project help
+/project new <name> [path] - Create a project
+/project list - List projects
+/project switch <id> - Switch project
+/project delete <id> - Delete project
+
+Admin commands:
+/users - List all users (admin)
+/ban <user_id> - Ban a user (admin)
+/unban <user_id> - Unban a user (admin)
+/role <user_id> <role> - Set user role (admin)`
 
 		return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
 			Text: help,
