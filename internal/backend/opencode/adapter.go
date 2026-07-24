@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -15,6 +16,14 @@ import (
 
 	"github.com/KotVnn/Telegram-Open-CLI/internal/backend"
 )
+
+// OpenCodeEvent represents a JSON event from OpenCode's streaming output.
+type OpenCodeEvent struct {
+	Type string `json:"type"`
+	Part *struct {
+		Text string `json:"text"`
+	} `json:"part,omitempty"`
+}
 
 var (
 	ErrBackendDisabled  = errors.New("backend disabled")
@@ -280,10 +289,32 @@ func (a *Adapter) executeStreaming(ctx context.Context, args []string, ch chan<-
 		case <-ctx.Done():
 			_ = cmd.Wait()
 			return ctx.Err()
-		case ch <- backend.StreamChunk{
-			Content: scanner.Text() + "\n",
-			Done:    false,
-		}:
+		default:
+		}
+
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+
+		// Parse OpenCode JSON event
+		var event OpenCodeEvent
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			// Not valid JSON, skip this line
+			continue
+		}
+
+		// Only send text content from "text" type events
+		if event.Type == "text" && event.Part != nil && event.Part.Text != "" {
+			select {
+			case <-ctx.Done():
+				_ = cmd.Wait()
+				return ctx.Err()
+			case ch <- backend.StreamChunk{
+				Content: event.Part.Text,
+				Done:    false,
+			}:
+			}
 		}
 	}
 
