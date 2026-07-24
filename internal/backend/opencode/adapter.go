@@ -305,9 +305,10 @@ func (a *Adapter) buildArgs(session *backend.Session, req *backend.SendMessageRe
 	args := make([]string, len(a.config.Args))
 	copy(args, a.config.Args)
 
-	if session != nil && session.ID != "" {
-		args = append(args, "--session", session.ID)
-	}
+	// Note: We don't pass --session to OpenCode because TOC's session IDs
+	// are UUIDs that OpenCode doesn't recognize. OpenCode manages its own
+	// sessions internally. For now, each message creates a new OpenCode session.
+	// TODO: Store OpenCode's session IDs in TOC's storage for proper session continuity.
 
 	if req.Model != "" {
 		args = append(args, "--model", req.Model)

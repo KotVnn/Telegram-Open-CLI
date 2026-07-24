@@ -113,9 +113,14 @@ func HandleMessage(adapter Adapter, sm *SessionManager) HandlerFunc {
 
 		for chunk := range stream {
 			if chunk.Error != nil {
-				sm.logger.Error().Err(chunk.Error).Int64("user_id", msg.FromID).Msg("stream error")
+				sm.logger.Error().
+					Err(chunk.Error).
+					Int64("user_id", msg.FromID).
+					Str("session_id", sessionID).
+					Str("text", msg.Text).
+					Msg("stream error")
 				return adapter.EditMessage(ctx, msg.ChatID, processingMsg.MessageID,
-					"Backend error. Please try again.")
+					fmt.Sprintf("Backend error: %v", chunk.Error))
 			}
 
 			responseBuilder.WriteString(chunk.Content)
@@ -231,9 +236,14 @@ func handleDocumentMessage(ctx context.Context, adapter Adapter, sm *SessionMana
 	var response strings.Builder
 	for chunk := range streamCh {
 		if chunk.Error != nil {
-			sm.logger.Error().Err(chunk.Error).Int64("user_id", msg.FromID).Msg("stream error")
+			sm.logger.Error().
+				Err(chunk.Error).
+				Int64("user_id", msg.FromID).
+				Str("session_id", sessionID).
+				Str("file", msg.Document.FileName).
+				Msg("stream error")
 			return adapter.EditMessage(ctx, msg.ChatID, processingMsg.MessageID,
-				"Backend error. Please try again.")
+				fmt.Sprintf("Backend error: %v", chunk.Error))
 		}
 		response.WriteString(chunk.Content)
 	}

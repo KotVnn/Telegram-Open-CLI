@@ -154,6 +154,13 @@ func (b *Bot) Start(ctx context.Context) error {
 	if b.config.Mode == "webhook" && b.config.WebhookURL != "" {
 		return b.startWebhook(ctx)
 	}
+
+	// Delete any existing webhook before starting polling
+	// This prevents "Conflict: terminated by other getUpdates request" errors
+	if _, err := b.bot.DeleteWebhook(ctx, &bot.DeleteWebhookParams{}); err != nil {
+		b.logger.Warn().Err(err).Msg("failed to delete webhook (may not exist)")
+	}
+
 	b.bot.Start(ctx)
 	return nil
 }
