@@ -32,6 +32,7 @@ Session commands:
 /sessions - List all sessions
 /switch <id> - Switch to a session
 /close [id] - Close current or specified session
+/delete [id] - Delete current or specified session permanently
 /status - Show current session status
 
 Project commands:

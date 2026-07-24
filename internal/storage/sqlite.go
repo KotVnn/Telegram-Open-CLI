@@ -104,8 +104,18 @@ func (s *SQLite) UpdateSession(ctx context.Context, session *Session) error {
 }
 
 func (s *SQLite) DeleteSession(ctx context.Context, id string) error {
+	if err := s.db.WithContext(ctx).Where("session_id = ?", id).Delete(&Message{}).Error; err != nil {
+		return fmt.Errorf("delete messages: %w", err)
+	}
 	if err := s.db.WithContext(ctx).Where("id = ?", id).Delete(&Session{}).Error; err != nil {
 		return fmt.Errorf("delete session: %w", err)
+	}
+	return nil
+}
+
+func (s *SQLite) DeleteMessagesBySession(ctx context.Context, sessionID string) error {
+	if err := s.db.WithContext(ctx).Where("session_id = ?", sessionID).Delete(&Message{}).Error; err != nil {
+		return fmt.Errorf("delete messages by session: %w", err)
 	}
 	return nil
 }

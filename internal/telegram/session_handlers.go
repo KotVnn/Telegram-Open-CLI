@@ -228,6 +228,41 @@ func HandleClose(adapter Adapter, sm *SessionManager) HandlerFunc {
 	}
 }
 
+// HandleDelete handles the /delete [id] command.
+func HandleDelete(adapter Adapter, sm *SessionManager) HandlerFunc {
+	return func(ctx context.Context, msg *IncomingMessage) error {
+		sessionID := sm.GetActiveSession(msg.FromID)
+		if len(msg.Args) > 0 {
+			sessionID = msg.Args[0]
+		}
+
+		if sessionID == "" {
+			return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+				Text: "No active session. Use /delete <session_id> to delete a specific session.",
+			})
+		}
+
+		session, err := sm.storage.GetSession(ctx, sessionID)
+		if err != nil {
+			return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+				Text: fmt.Sprintf("Session not found: %s", sessionID),
+			})
+		}
+
+		if err := sm.storage.DeleteSession(ctx, sessionID); err != nil {
+			return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+				Text: fmt.Sprintf("Error deleting session: %v", err),
+			})
+		}
+
+		sm.ClearActiveSession(msg.FromID)
+
+		return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+			Text: fmt.Sprintf("Session deleted: %s\n\nName: %s", sessionID, session.Title),
+		})
+	}
+}
+
 // HandleStatus handles the /status command.
 func HandleStatus(adapter Adapter, sm *SessionManager) HandlerFunc {
 	return func(ctx context.Context, msg *IncomingMessage) error {

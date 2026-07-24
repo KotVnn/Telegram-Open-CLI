@@ -24,6 +24,7 @@ type Storage interface {
 	// Messages
 	SaveMessage(ctx context.Context, msg *Message) error
 	GetMessages(ctx context.Context, sessionID string, limit, offset int) ([]*Message, error)
+	DeleteMessagesBySession(ctx context.Context, sessionID string) error
 
 	// Users
 	SaveUser(ctx context.Context, user *User) error

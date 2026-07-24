@@ -185,6 +185,7 @@ func (a *App) initTelegram(ctx context.Context) error {
 	bot.HandleCommand("sessions", telegram.HandleSessions(a.bot, sessionManager))
 	bot.HandleCommand("switch", telegram.HandleSwitch(a.bot, sessionManager))
 	bot.HandleCommand("close", telegram.HandleClose(a.bot, sessionManager))
+	bot.HandleCommand("delete", telegram.HandleDelete(a.bot, sessionManager))
 	bot.HandleCommand("status", telegram.HandleStatus(a.bot, sessionManager))
 	bot.HandleCommand("me", telegram.HandleMe(a.bot, a.users))
 	bot.HandleCommand("users", telegram.HandleUsers(a.bot, a.users))
