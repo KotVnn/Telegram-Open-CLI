@@ -65,19 +65,21 @@ func TestSendMessage(t *testing.T) {
 
 func TestListMessages(t *testing.T) {
 	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/session/ses_1/message", r.URL.Path)
-		assert.Equal(t, "10", r.URL.Query().Get("limit"))
-		_, _ = w.Write([]byte(`{"data":[
-			{"id":"msg_2","type":"assistant","time":{"created":1785586000000},
-			 "content":[{"type":"text","id":"p1","text":"Hi"}]}
-		]}`))
+		assert.Equal(t, "/session/ses_1/message", r.URL.Path)
+		_, _ = w.Write([]byte(`[
+			{"info":{"id":"msg_1","role":"user","time":{"created":1785585000000}},
+			 "parts":[{"type":"text","text":"hello"}]},
+			{"info":{"id":"msg_2","role":"assistant","time":{"created":1785586000000}},
+			 "parts":[{"type":"step-start"},{"type":"text","text":"Hi"},{"type":"step-finish"}]}
+		]`))
 	}))
 
 	msgs, err := client.ListMessages(context.Background(), "ses_1", 10, 0)
 	require.NoError(t, err)
-	require.Len(t, msgs, 1)
+	require.Len(t, msgs, 2)
 	assert.Equal(t, "Hi", msgs[0].DisplayText())
 	assert.Equal(t, "assistant", msgs[0].Type)
+	assert.Equal(t, "hello", msgs[1].DisplayText())
 }
 
 func TestAbort(t *testing.T) {

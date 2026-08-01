@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -292,16 +291,11 @@ func (m SessionMessage) DisplayText() string {
 }
 
 // ListMessages returns the messages of a session, newest first by default.
+// It uses the v1 message list endpoint which returns full {info, parts}
+// records; the v2 /api/session/{id}/message endpoint returns empty on the
+// current server versions.
 func (c *Client) ListMessages(ctx context.Context, sessionID string, limit int, offset int) ([]SessionMessage, error) {
-	q := url.Values{}
-	if limit > 0 {
-		q.Set("limit", strconv.Itoa(limit))
-	}
-	if offset > 0 {
-		q.Set("offset", strconv.Itoa(offset))
-	}
-	q.Set("order", "desc")
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/session/"+url.PathEscape(sessionID)+"/message?"+q.Encode(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/session/"+url.PathEscape(sessionID)+"/message", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -318,13 +312,36 @@ func (c *Client) ListMessages(ctx context.Context, sessionID string, limit int, 
 		return nil, fmt.Errorf("list messages: status %d: %s", resp.StatusCode, body)
 	}
 
-	var out struct {
-		Data []SessionMessage `json:"data"`
-	}
+	var out []MessageResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list messages: decode: %w", err)
 	}
-	return out.Data, nil
+
+	msgs := make([]SessionMessage, 0, len(out))
+	for _, m := range out {
+		content := make([]ContentItem, 0, len(m.Parts))
+		for _, p := range m.Parts {
+			if p.Type == "text" && p.Text != "" {
+				content = append(content, ContentItem{Type: "text", Text: p.Text})
+			}
+		}
+		msgs = append(msgs, SessionMessage{
+			ID:      m.Info.ID,
+			Type:    m.Info.Role,
+			Time:    m.Info.Time,
+			Content: content,
+		})
+	}
+	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
+		msgs[i], msgs[j] = msgs[j], msgs[i]
+	}
+	if offset > 0 && offset < len(msgs) {
+		msgs = msgs[offset:]
+	}
+	if limit > 0 && limit < len(msgs) {
+		msgs = msgs[:limit]
+	}
+	return msgs, nil
 }
 
 // Provider describes an LLM provider.

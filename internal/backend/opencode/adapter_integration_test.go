@@ -95,6 +95,10 @@ func TestServeAdapterEndToEnd(t *testing.T) {
 		}
 		require.NotEmpty(t, sb.String(), "expected a response")
 		t.Logf("response: %s", sb.String())
+
+		msgs, err := adapter.ListMessages(ctx, session.ID, 5)
+		require.NoError(t, err)
+		assert.NotEmpty(t, msgs, "message history should be retrievable")
 	})
 
 	t.Run("list files", func(t *testing.T) {
