@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	ErrMissingConfig    = errors.New("missing config")
-	ErrInvalidConfig    = errors.New("invalid config")
+	ErrMissingConfig = errors.New("missing config")
+	ErrInvalidConfig = errors.New("invalid config")
 )
 
 func validate(cfg *Config) error {
@@ -41,6 +41,14 @@ func validate(cfg *Config) error {
 		if backendCfg.Timeout == 0 {
 			backendCfg.Timeout = 30 * time.Minute
 			cfg.Backends[name] = backendCfg
+		}
+		if backendCfg.Port < 0 {
+			return fmt.Errorf("backend %q: port must be non-negative: %w", name, ErrInvalidConfig)
+		}
+		switch backendCfg.Permission {
+		case "", "ask", "auto", "deny":
+		default:
+			return fmt.Errorf("backend %q: permission must be one of ask|auto|deny: %w", name, ErrInvalidConfig)
 		}
 	}
 

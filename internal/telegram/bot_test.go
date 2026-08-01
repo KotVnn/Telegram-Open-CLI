@@ -16,8 +16,8 @@ type mockAdapter struct {
 	sentMessages []OutgoingMessage
 }
 
-func (m *mockAdapter) Start(ctx context.Context) error                          { return nil }
-func (m *mockAdapter) Stop(ctx context.Context) error                           { return nil }
+func (m *mockAdapter) Start(ctx context.Context) error { return nil }
+func (m *mockAdapter) Stop(ctx context.Context) error  { return nil }
 func (m *mockAdapter) SendMessage(ctx context.Context, chatID int64, msg OutgoingMessage) error {
 	m.sentMessages = append(m.sentMessages, msg)
 	return nil
@@ -35,11 +35,11 @@ func (m *mockAdapter) SendDocument(ctx context.Context, chatID int64, doc Docume
 func (m *mockAdapter) AnswerCallback(ctx context.Context, callbackID string, text string) error {
 	return nil
 }
-func (m *mockAdapter) HandleCommand(cmd string, handler HandlerFunc)    {}
-func (m *mockAdapter) HandleMessage(pattern string, handler HandlerFunc) {}
+func (m *mockAdapter) HandleCommand(cmd string, handler HandlerFunc)              {}
+func (m *mockAdapter) HandleMessage(pattern string, handler HandlerFunc)          {}
 func (m *mockAdapter) HandleCallback(pattern string, handler CallbackHandlerFunc) {}
-func (m *mockAdapter) HandleDefault(handler HandlerFunc)                {}
-func (m *mockAdapter) Use(middlewares ...Middleware)                     {}
+func (m *mockAdapter) HandleDefault(handler HandlerFunc)                          {}
+func (m *mockAdapter) Use(middlewares ...Middleware)                              {}
 
 func newTestBot() *Bot {
 	return &Bot{

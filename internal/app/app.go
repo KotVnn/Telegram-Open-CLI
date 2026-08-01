@@ -129,7 +129,7 @@ func (a *App) initBackends(ctx context.Context) error {
 	a.backends = backend.NewManager()
 
 	a.backends.Register("opencode", func() backend.Backend {
-		return opencode.New()
+		return opencode.New(opencode.WithLogger(a.logger))
 	})
 
 	a.backends.Register("claude", func() backend.Backend {
@@ -153,6 +153,11 @@ func (a *App) initBackends(ctx context.Context) error {
 			WorkingDir:  cfg.WorkingDir,
 			Environment: cfg.Environment,
 			Timeout:     cfg.Timeout,
+			Hostname:    cfg.Hostname,
+			Port:        cfg.Port,
+			Password:    cfg.Password,
+			AutoRestart: cfg.AutoRestart,
+			Permission:  cfg.Permission,
 		}
 	}
 
@@ -193,6 +198,10 @@ func (a *App) initTelegram(ctx context.Context) error {
 	bot.HandleCommand("unban", telegram.HandleUnban(a.bot, a.users))
 	bot.HandleCommand("role", telegram.HandleRole(a.bot, a.users))
 	bot.HandleCommand("project", telegram.HandleProject(a.bot, projectManager))
+	bot.HandleCommand("abort", telegram.HandleAbort(a.bot, sessionManager))
+	bot.HandleCommand("messages", telegram.HandleMessages(a.bot, sessionManager))
+	bot.HandleCommand("ls", telegram.HandleLS(a.bot, sessionManager))
+	bot.HandleCommand("models", telegram.HandleModels(a.bot, sessionManager))
 
 	bot.HandleDefault(telegram.HandleMessage(a.bot, sessionManager))
 
@@ -201,6 +210,7 @@ func (a *App) initTelegram(ctx context.Context) error {
 	bot.HandleCallback("confirm:", telegram.HandleConfirmCallback(a.bot, sessionManager))
 	bot.HandleCallback("model:", telegram.HandleModelCallback(a.bot, sessionManager))
 	bot.HandleCallback("agent:", telegram.HandleAgentCallback(a.bot, sessionManager))
+	bot.HandleCallback("perm:", telegram.HandlePermissionCallback(a.bot, sessionManager))
 	bot.HandleCallback("cancel", telegram.HandleCancelCallback(a.bot))
 
 	bot.Use(

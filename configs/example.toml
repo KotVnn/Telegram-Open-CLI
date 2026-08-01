@@ -28,7 +28,19 @@ path = ""
 [backends.opencode]
 enabled = true
 command = "opencode"
-args = ["run", "--format", "json"]
+# Serve mode: TOC manages an `opencode serve` subprocess and talks to it over HTTP/SSE.
+# address to bind the serve subprocess to
+hostname = "127.0.0.1"
+# port to bind the serve subprocess to
+port = 4096
+# optional password for the serve HTTP API (sets OPENCODE_SERVER_PASSWORD)
+password = ""
+# spawn `opencode serve` if nothing is already listening on hostname:port
+auto_restart = true
+# permission policy: "auto" (approve), "ask" (prompt via Telegram), "deny"
+permission = "ask"
+# directory the `opencode serve` subprocess runs in (the workspace it edits)
+# working_dir = "/workspace"
 # timeout = "30m"
 
 # Optional: Environment variables for the backend

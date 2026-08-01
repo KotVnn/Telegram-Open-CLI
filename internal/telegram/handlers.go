@@ -34,6 +34,10 @@ Session commands:
 /close [id] - Close current or specified session
 /delete [id] - Delete current or specified session permanently
 /status - Show current session status
+/abort - Stop the current in-flight message
+/messages [n] - Show the last n messages of the current session
+/ls [path] - List files in the workspace (opencode)
+/models - List available models and agents (opencode)
 
 Project commands:
 /project - Show project help

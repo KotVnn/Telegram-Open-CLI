@@ -39,8 +39,8 @@ func New() *Adapter {
 }
 
 func (a *Adapter) Name() string        { return "aider" }
-func (a *Adapter) Description() string  { return "Aider AI Coding Agent" }
-func (a *Adapter) Version() string      { return "1.0.0" }
+func (a *Adapter) Description() string { return "Aider AI Coding Agent" }
+func (a *Adapter) Version() string     { return "1.0.0" }
 
 func (a *Adapter) Initialize(ctx context.Context, config backend.BackendConfig) error {
 	if !config.Enabled {

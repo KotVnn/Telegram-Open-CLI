@@ -7,14 +7,14 @@ import (
 
 // Config holds the application configuration.
 type Config struct {
-	Version        string            `mapstructure:"version" toml:"version"`
-	DefaultBackend string            `mapstructure:"default_backend" toml:"default_backend"`
-	Telegram       TelegramConfig    `mapstructure:"telegram" toml:"telegram"`
-	Storage        StorageConfig     `mapstructure:"storage" toml:"storage"`
+	Version        string             `mapstructure:"version" toml:"version"`
+	DefaultBackend string             `mapstructure:"default_backend" toml:"default_backend"`
+	Telegram       TelegramConfig     `mapstructure:"telegram" toml:"telegram"`
+	Storage        StorageConfig      `mapstructure:"storage" toml:"storage"`
 	Backends       map[string]Backend `mapstructure:"backends" toml:"backends"`
-	Security       SecurityConfig    `mapstructure:"security" toml:"security"`
-	Logging        LoggingConfig     `mapstructure:"logging" toml:"logging"`
-	Metrics        MetricsConfig     `mapstructure:"metrics" toml:"metrics"`
+	Security       SecurityConfig     `mapstructure:"security" toml:"security"`
+	Logging        LoggingConfig      `mapstructure:"logging" toml:"logging"`
+	Metrics        MetricsConfig      `mapstructure:"metrics" toml:"metrics"`
 }
 
 // MetricsConfig holds metrics server configuration.
@@ -45,11 +45,17 @@ type Backend struct {
 	WorkingDir  string            `mapstructure:"working_dir" toml:"working_dir"`
 	Environment map[string]string `mapstructure:"environment" toml:"environment"`
 	Timeout     time.Duration     `mapstructure:"timeout" toml:"timeout"`
+
+	Hostname    string `mapstructure:"hostname" toml:"hostname"`
+	Port        int    `mapstructure:"port" toml:"port"`
+	Password    string `mapstructure:"password" toml:"password"`
+	AutoRestart bool   `mapstructure:"auto_restart" toml:"auto_restart"`
+	Permission  string `mapstructure:"permission" toml:"permission"`
 }
 
 // SecurityConfig holds security settings.
 type SecurityConfig struct {
-	RequireAuth       bool `mapstructure:"require_auth" toml:"require_auth"`
+	RequireAuth        bool `mapstructure:"require_auth" toml:"require_auth"`
 	MaxSessionsPerUser int  `mapstructure:"max_sessions_per_user" toml:"max_sessions_per_user"`
 }
 

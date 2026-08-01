@@ -84,6 +84,7 @@ type Session struct {
 	Model      string        `json:"model"`
 	Agent      string        `json:"agent"`
 	WorkingDir string        `json:"working_dir"`
+	ExternalID string        `json:"external_id" gorm:"index"`
 	CreatedAt  time.Time     `json:"created_at"`
 	UpdatedAt  time.Time     `json:"updated_at"`
 }

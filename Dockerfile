@@ -1,43 +1,36 @@
-FROM golang:1.22-alpine AS builder
+# Build stage
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apk add --no-cache git
+RUN apk add --no-cache git ca-certificates
 
-# Copy go mod files
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
 COPY . .
 
-# Build
-RUN CGO_ENABLED=0 GOOS=linux go build -o /toc ./cmd/toc
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /toc ./cmd/toc
 
-# Runtime
-FROM alpine:3.19
+# Runtime stage
+# opencode serve requires Node.js; the opencode CLI is installed via npm.
+FROM node:22-alpine
 
-RUN apk add --no-cache ca-certificates tzdata
-
-# Create non-root user
-RUN adduser -D -u 1000 toc
+RUN apk add --no-cache ca-certificates tzdata git curl \
+    && npm install -g opencode-ai@latest \
+    && adduser -D -u 1000 toc \
+    && mkdir -p /workspace /home/toc/.toc /home/toc/.config/opencode \
+    && chown -R toc:toc /workspace /home/toc
 
 WORKDIR /home/toc
 
-# Copy binary from builder
 COPY --from=builder /toc /usr/local/bin/toc
-
-# Copy example config
 COPY configs/example.toml /home/toc/.toc/config.toml
-
-# Set ownership
-RUN chown -R toc:toc /home/toc
 
 USER toc
 
-# Volumes for persistent data
-VOLUME ["/home/toc/.toc"]
+# Persistent data and the workspace the agent works on
+VOLUME ["/home/toc/.toc", "/workspace"]
 
 # Metrics port
 EXPOSE 9090

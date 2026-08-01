@@ -89,8 +89,8 @@ func TestAdapter_SessionManagement(t *testing.T) {
 
 	t.Run("create session", func(t *testing.T) {
 		session, err := a.CreateSession(ctx, backend.SessionOpts{
-			Title:     "Test Session",
-			Model:     "claude-sonnet-4-20250514",
+			Title:      "Test Session",
+			Model:      "claude-sonnet-4-20250514",
 			WorkingDir: "/tmp",
 		})
 		require.NoError(t, err)

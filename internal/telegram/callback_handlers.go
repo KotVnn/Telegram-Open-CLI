@@ -36,10 +36,12 @@ func HandleSessionCallback(adapter Adapter, sm *SessionManager) CallbackHandlerF
 // HandleNewSessionCallback handles new session callback.
 func HandleNewSessionCallback(adapter Adapter, sm *SessionManager) CallbackHandlerFunc {
 	return func(ctx context.Context, cb *CallbackQuery) error {
-		backend := sm.backend
-		caps := backend.Capabilities()
+		models, _, err := listModelsAgents(ctx, sm.backend)
+		if err != nil {
+			return adapter.AnswerCallback(ctx, cb.ID, "Failed to list models")
+		}
 
-		keyboard := NewModelKeyboard(caps.SupportedModels)
+		keyboard := NewModelKeyboard(models)
 
 		if err := adapter.SendMessage(ctx, cb.ChatID, OutgoingMessage{
 			Text:        "Select model:",
@@ -105,10 +107,12 @@ func HandleModelCallback(adapter Adapter, sm *SessionManager) CallbackHandlerFun
 		sm.pendingModels[cb.FromID] = model
 		sm.mu.Unlock()
 
-		backend := sm.backend
-		caps := backend.Capabilities()
+		_, agents, err := listModelsAgents(ctx, sm.backend)
+		if err != nil {
+			return adapter.AnswerCallback(ctx, cb.ID, "Failed to list agents")
+		}
 
-		keyboard := NewAgentKeyboard(caps.SupportedAgents)
+		keyboard := NewAgentKeyboard(agents)
 
 		if err := adapter.SendMessage(ctx, cb.ChatID, OutgoingMessage{
 			Text:        "Model: " + model + "\nSelect agent:",
@@ -119,6 +123,19 @@ func HandleModelCallback(adapter Adapter, sm *SessionManager) CallbackHandlerFun
 
 		return adapter.AnswerCallback(ctx, cb.ID, "")
 	}
+}
+
+// listModelsAgents returns available models and agents, falling back to the
+// backend's static capabilities when it does not support dynamic listing.
+func listModelsAgents(ctx context.Context, b backend.Backend) ([]string, []string, error) {
+	if lister, ok := b.(backend.ModelLister); ok {
+		models, agents, err := lister.ListModels(ctx)
+		if err == nil && len(models) > 0 {
+			return models, agents, nil
+		}
+	}
+	caps := b.Capabilities()
+	return caps.SupportedModels, caps.SupportedAgents, nil
 }
 
 // HandleAgentCallback handles agent selection callback.
@@ -161,6 +178,7 @@ func HandleAgentCallback(adapter Adapter, sm *SessionManager) CallbackHandlerFun
 			Model:      session.Model,
 			Agent:      session.Agent,
 			WorkingDir: session.WorkingDir,
+			ExternalID: session.ExternalID,
 			CreatedAt:  session.CreatedAt,
 			UpdatedAt:  session.UpdatedAt,
 		}

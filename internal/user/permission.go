@@ -12,12 +12,12 @@ type Permission string
 
 const (
 	PermissionCreateSession Permission = "session:create"
-	PermissionDeleteSession  Permission = "session:delete"
+	PermissionDeleteSession Permission = "session:delete"
 	PermissionCreateProject Permission = "project:create"
-	PermissionDeleteProject  Permission = "project:delete"
-	PermissionManageUsers    Permission = "users:manage"
-	PermissionManageRoles    Permission = "roles:manage"
-	PermissionUseBackend     Permission = "backend:use"
+	PermissionDeleteProject Permission = "project:delete"
+	PermissionManageUsers   Permission = "users:manage"
+	PermissionManageRoles   Permission = "roles:manage"
+	PermissionUseBackend    Permission = "backend:use"
 )
 
 // rolePermissions maps roles to their allowed permissions.

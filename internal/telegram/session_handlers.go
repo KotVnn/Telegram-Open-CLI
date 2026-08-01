@@ -22,6 +22,7 @@ type SessionManager struct {
 	mu             sync.RWMutex
 	activeSessions map[int64]string
 	pendingModels  map[int64]string
+	permRequests   map[string]*pendingPermission
 }
 
 // NewSessionManager creates a new session manager.
@@ -34,6 +35,7 @@ func NewSessionManager(storage storage.Storage, backend backend.Backend, pm *Pro
 		botToken:       botToken,
 		activeSessions: make(map[int64]string),
 		pendingModels:  make(map[int64]string),
+		permRequests:   make(map[string]*pendingPermission),
 	}
 }
 
@@ -100,6 +102,7 @@ func HandleNew(adapter Adapter, sm *SessionManager) HandlerFunc {
 			Model:      session.Model,
 			Agent:      session.Agent,
 			WorkingDir: session.WorkingDir,
+			ExternalID: session.ExternalID,
 			CreatedAt:  session.CreatedAt,
 			UpdatedAt:  session.UpdatedAt,
 		}

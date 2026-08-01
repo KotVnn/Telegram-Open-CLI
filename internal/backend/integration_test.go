@@ -120,8 +120,8 @@ func (m *integrationMockBackend) Initialize(ctx context.Context, config BackendC
 	return nil
 }
 
-func (m *integrationMockBackend) Start(ctx context.Context) error { return nil }
-func (m *integrationMockBackend) Stop(ctx context.Context) error  { return nil }
+func (m *integrationMockBackend) Start(ctx context.Context) error  { return nil }
+func (m *integrationMockBackend) Stop(ctx context.Context) error   { return nil }
 func (m *integrationMockBackend) Health(ctx context.Context) error { return nil }
 
 func (m *integrationMockBackend) CreateSession(ctx context.Context, opts SessionOpts) (*Session, error) {

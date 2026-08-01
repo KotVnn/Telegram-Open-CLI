@@ -99,9 +99,13 @@ func HandleMessage(adapter Adapter, sm *SessionManager) HandlerFunc {
 		}
 
 		stream, err := sm.backend.StreamMessage(ctx, &backend.SendMessageRequest{
-			SessionID:  sessionID,
-			Content:    msg.Text,
-			WorkingDir: session.WorkingDir,
+			SessionID:         sessionID,
+			ExternalID:        session.ExternalID,
+			Content:           msg.Text,
+			WorkingDir:        session.WorkingDir,
+			Agent:             session.Agent,
+			Model:             session.Model,
+			PermissionHandler: sm.PermissionHandler(adapter, msg.ChatID, msg.FromID),
 		})
 		if err != nil {
 			sm.logger.Error().Err(err).Int64("user_id", msg.FromID).Str("session_id", sessionID).Msg("stream message failed")
@@ -185,6 +189,13 @@ func handleDocumentMessage(ctx context.Context, adapter Adapter, sm *SessionMana
 		})
 	}
 
+	session, err := sm.storage.GetSession(ctx, sessionID)
+	if err != nil {
+		return adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
+			Text: fmt.Sprintf("Session not found: %s", sessionID),
+		})
+	}
+
 	if msg.Document.FileSize > maxFileSizeWarning {
 		_ = adapter.SendMessage(ctx, msg.ChatID, OutgoingMessage{
 			Text: fmt.Sprintf("Warning: File size is %dMB. Large files may take longer to process or fail.", msg.Document.FileSize/(1024*1024)),
@@ -218,8 +229,9 @@ func handleDocumentMessage(ctx context.Context, adapter Adapter, sm *SessionMana
 	}
 
 	req := &backend.SendMessageRequest{
-		SessionID: sessionID,
-		Content:   fmt.Sprintf("Analyze this file: %s", msg.Document.FileName),
+		SessionID:  sessionID,
+		ExternalID: session.ExternalID,
+		Content:    fmt.Sprintf("Analyze this file: %s", msg.Document.FileName),
 		Files: []backend.FileAttachment{
 			{
 				Name:     msg.Document.FileName,
@@ -227,6 +239,7 @@ func handleDocumentMessage(ctx context.Context, adapter Adapter, sm *SessionMana
 				MIMEType: msg.Document.MimeType,
 			},
 		},
+		PermissionHandler: sm.PermissionHandler(adapter, msg.ChatID, msg.FromID),
 	}
 
 	streamCh, err := sm.backend.StreamMessage(ctx, req)
