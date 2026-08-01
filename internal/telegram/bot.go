@@ -63,7 +63,7 @@ type IncomingMessage struct {
 	MessageID        int
 	ChatID           int64
 	FromID           int64
-	FromUsername      string
+	FromUsername     string
 	FromFirstName    string
 	FromLastName     string
 	Text             string
@@ -102,14 +102,14 @@ type Middleware func(next HandlerFunc) HandlerFunc
 
 // Bot implements the Adapter interface using go-telegram/bot.
 type Bot struct {
-	bot               *bot.Bot
-	logger            zerolog.Logger
-	config            Config
-	middlewares       []Middleware
-	commandHandlers   map[string]HandlerFunc
-	messageHandlers   []messageHandler
-	callbackHandlers  []callbackHandler
-	defaultHandler    HandlerFunc
+	bot              *bot.Bot
+	logger           zerolog.Logger
+	config           Config
+	middlewares      []Middleware
+	commandHandlers  map[string]HandlerFunc
+	messageHandlers  []messageHandler
+	callbackHandlers []callbackHandler
+	defaultHandler   HandlerFunc
 }
 
 type messageHandler struct {
@@ -183,10 +183,9 @@ func (b *Bot) Start(ctx context.Context) error {
 	}
 
 	// Wait for Telegram server to release the previous getUpdates session.
-	// Telegram maintains server-side state for 30-60+ seconds after client disconnect.
-	// Without this delay, the new getUpdates call will conflict with the stale session.
-	b.logger.Info().Msg("waiting for Telegram session cleanup (30s)...")
-	time.Sleep(30 * time.Second)
+	// 3s is usually sufficient for cleanup after DropPendingUpdates.
+	b.logger.Info().Msg("waiting for Telegram session cleanup (3s)...")
+	time.Sleep(3 * time.Second)
 	b.logger.Info().Msg("starting polling")
 
 	b.bot.Start(ctx)
@@ -294,7 +293,7 @@ func (b *Bot) SendDocument(ctx context.Context, chatID int64, doc Document) erro
 	}
 
 	params := &bot.SendDocumentParams{
-		ChatID:   chatID,
+		ChatID: chatID,
 		Document: &models.InputFileUpload{
 			Filename: doc.FileName,
 			Data:     bytes.NewReader(doc.Content),
@@ -407,8 +406,8 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, cq *models.CallbackQuery)
 	}
 
 	dummyMsg := &IncomingMessage{
-		ChatID:      chatID,
-		FromID:      cq.From.ID,
+		ChatID:       chatID,
+		FromID:       cq.From.ID,
 		FromUsername: cq.From.Username,
 	}
 
@@ -464,7 +463,7 @@ func parseIncomingMessage(update *models.Update) *IncomingMessage {
 		MessageID:     msg.ID,
 		ChatID:        msg.Chat.ID,
 		FromID:        msg.From.ID,
-		FromUsername:   msg.From.Username,
+		FromUsername:  msg.From.Username,
 		FromFirstName: msg.From.FirstName,
 		FromLastName:  msg.From.LastName,
 		Text:          msg.Text,
